@@ -1,7 +1,10 @@
 package net.littleredcomputer.algebra.test
 
 import net.littleredcomputer.algebra.{Monomial, Polynomial}
+import org.scalacheck.Properties
+import org.scalacheck.Prop.forAll
 import org.scalatest._
+import org.scalatest.prop.PropertyChecks
 
 class PolynomialSuite extends FlatSpec with Matchers {
 
@@ -18,9 +21,25 @@ class PolynomialSuite extends FlatSpec with Matchers {
     p * z should be (z)
     z * p should be (z)
   }
-
-
 }
+
+// this almost compiles, but we need to provide a generator for polynomials.
+//object PolySpec extends Properties("Polynomial[Int]") {
+//  property("commutative") = forAll { (p: Polynomial[Int], q: Polynomial[Int]) =>
+//    (p * q) == (q * p)
+//  }
+//}
+
+//class FooSpec extends WordSpec with PropertyChecks {
+//  "polynomail multplication" must {
+//    "be commutative" in {
+//      forAll { (p: Polynomial[Int], q: Polynomial[Int]) =>
+//        p * q should be (q * p)
+//
+//      }
+//    }
+//  }
+//}
 /**
   * Created by colin on 7/3/2016.
   */
