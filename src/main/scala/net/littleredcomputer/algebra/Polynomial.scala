@@ -44,6 +44,8 @@ object Polynomial {
     } yield Monomial(c, es)
     Polynomial(terms.toList.sorted(foo))
   }
+  // experiment with variance: why can't a Polynomial[Nothing] serve as a zero element?
+  def zero[T]() (implicit R: Ring[T]) = make[T](List())
 }
 
 object MyApp extends App {
