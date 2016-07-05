@@ -17,8 +17,12 @@ case class Monomial[T] (coefficient: T, exponents: Vector[Int]) (implicit R: Rin
   override def toString = "" + coefficient + "×" + exponents.toList.mkString("⋅")
 }
 
-object foo extends Ordering[Monomial[_]] {
-  override def compare(x: Monomial[_], y: Monomial[_]): Int = y.degree - x.degree
+object Monomial {
+  object Ordering {
+    object GrLex extends Ordering[Monomial[_]] {
+      override def compare(x: Monomial[_], y: Monomial[_]): Int = y.degree - x.degree
+    }
+  }
 }
 
 case class Polynomial[T] private (ms: List[Monomial[T]]) (implicit R: Ring[T]) {
@@ -42,7 +46,7 @@ object Polynomial {
       c = (R.zero /: cs)((sum, m) => R.+(sum, m.coefficient))
       if c != R.zero
     } yield Monomial(c, es)
-    Polynomial(terms.toList.sorted(foo))
+    Polynomial(terms.toList.sorted(Monomial.Ordering.GrLex))
   }
   // experiment with variance: why can't a Polynomial[Nothing] serve as a zero element?
   def zero[T]() (implicit R: Ring[T]) = make[T](List())
@@ -84,13 +88,14 @@ object MyApp extends App {
   println("z.ms", z.ms)
   println("z.ms.head", z.ms.head)
 
-  println("o1", foo.compare(x, xy))
-  println("o2", foo.compare(xy, x))
+  println("o1", Monomial.Ordering.GrLex.compare(x, xy))
+  println("o2", Monomial.Ordering.GrLex.compare(xy, x))
 
-  println(List(x,xy).sorted(foo))
-  println(List(xy,x).sorted(foo))
+  println(List(x,xy).sorted(Monomial.Ordering.GrLex))
+  println(List(xy,x).sorted(Monomial.Ordering.GrLex))
 
   println("0", Polynomial.make(List(Monomial(0, Vector(1,0)))))
+  println("z+z", z+z)
   println("z*z", z*z)
   println("-z", -z)
   println("-(z^2)", -(z*z))
