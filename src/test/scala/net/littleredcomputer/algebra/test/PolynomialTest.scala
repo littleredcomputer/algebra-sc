@@ -1,12 +1,19 @@
 package net.littleredcomputer.algebra.test
 
 import net.littleredcomputer.algebra.{Monomial, Polynomial, Ring}
-import org.scalacheck.{Arbitrary, Gen, Properties}
+import org.apache.commons.math3.fraction.BigFraction
+import org.scalacheck.{Arbitrary, Gen, Properties, Test}
 import org.scalacheck.Prop.forAll
 import org.scalatest._
 import org.scalacheck.Gen._
+import org.scalacheck.Test.Parameters
 
 object Implicits {
+  implicit val arbitraryRational: Arbitrary[BigFraction] = Arbitrary { for {
+    n <- Gen.chooseNum(-5000,5000)
+    d <- Gen.chooseNum(1,5000)
+  } yield new BigFraction(n, d) }
+
   implicit def arbitraryPolynomial[T](implicit a: Arbitrary[T],
                                       R: Ring[T],
                                       arity: Int): Arbitrary[Polynomial[T]] = Arbitrary {
@@ -64,7 +71,7 @@ class PolynomialSuite extends FlatSpec with Matchers {
   }
 }
 
-object PTest extends Properties("Polynomial[Int]") {
+object PTestZ extends Properties("Polynomial[Int]") {
   import Implicits.arbitraryPolynomial
   type Zx = Polynomial[Int]
   for (x <- 1 to 3) {
@@ -81,3 +88,25 @@ object PTest extends Properties("Polynomial[Int]") {
   }
 }
 
+object PTestQ extends Properties("Polynomial[BigFraction]") {
+
+  val p = Test.Parameters.default.withMinSuccessfulTests(10)
+  overrideParameters(p)
+  type Qx = Polynomial[BigFraction]
+  val z: Qx = Polynomial.zero[BigFraction]
+
+  import Implicits.arbitraryRational
+  import Implicits.arbitraryPolynomial
+  for (x <- 1 to 3) {
+    implicit val arity = x
+    property("+ is commutative a=" + arity) = forAll {
+      (p: Polynomial[BigFraction], q: Polynomial[BigFraction]) => p + q == q + p
+    }
+    property("* is comm. a=" + arity) = forAll {
+      (p: Qx, q: Qx) => p * q == q * p
+    }
+    property("* distributes over + a=" + arity) = forAll {
+      (p: Qx, q: Qx, r: Qx) => p * (q + r) == p * q + p * r
+    }
+  }
+}

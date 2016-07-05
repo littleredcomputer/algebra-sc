@@ -3,6 +3,8 @@
   */
 package net.littleredcomputer.algebra
 
+import org.apache.commons.math3.fraction.BigFraction
+
 trait Ring[T] {
   def zero: T
   def *(x: T, y: T): T
@@ -11,6 +13,7 @@ trait Ring[T] {
 }
 
 object Ring {
+
   implicit object Z extends Ring[Int] {
     def zero = 0
     def *(x: Int, y: Int) = x * y
@@ -28,5 +31,11 @@ object Ring {
     def *(x: Polynomial[Int], y: Polynomial[Int]) = x * y
     def +(x: Polynomial[Int], y: Polynomial[Int]) = x + y
     def unary_-(x: Polynomial[Int]) = -x
+  }
+  implicit object Q extends Ring[BigFraction] {
+    def zero = BigFraction.ZERO
+    def *(x: BigFraction, y: BigFraction) = x.multiply(y)
+    def +(x: BigFraction, y: BigFraction) = x.add(y)
+    def unary_-(x: BigFraction) = x.negate()
   }
 }

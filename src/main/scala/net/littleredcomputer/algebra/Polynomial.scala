@@ -4,6 +4,8 @@
 
 package net.littleredcomputer.algebra
 
+import org.apache.commons.math3.fraction.BigFraction
+
 import scala.Function.tupled
 
 
@@ -46,15 +48,24 @@ case class Polynomial[T] private (ms: List[Monomial[T]]) (implicit R: Ring[T]) {
     case Monomial(c, es) => Monomial(R.unary_-(c), es)
   })
   def -(y: Polynomial[T]) = this + (-y)
+  def leadingTerm = ms.head
+  def divide(y: Polynomial[T]) = {
+    var quotient = Polynomial.zero[T]
+    var remainder = this
+    while (false) {
+
+    }
+    (quotient, remainder)
+  }
 }
 
 object Polynomial {
   def make[T](ms: Seq[Monomial[T]]) (implicit R: Ring[T]) = {
     val terms = for {
-      (es, cs) <- ms groupBy (_.exponents)
+      (xs, cs) <- ms groupBy (_.exponents)
       c = (R.zero /: cs)((sum, m) => R.+(sum, m.coefficient))
       if c != R.zero
-    } yield Monomial(c, es)
+    } yield Monomial(c, xs)
     Polynomial(terms.toList.sorted(Monomial.Ordering.GrLex))
   }
   // experiment with variance: why can't a Polynomial[Nothing] serve as a zero element?
@@ -125,6 +136,15 @@ object MyApp extends App {
       Monomial(z, Vector(1)),
       Monomial(z*z, Vector(0))))
   println("Z", pp)
+
+  val qx = Monomial[BigFraction](BigFraction.ONE_HALF, Vector(1, 0))
+  val qy = Monomial[BigFraction](BigFraction.ONE_HALF, Vector(0, 1))
+  val qxy = qx * qy
+  println("qxy", qxy)
+  val pxy = Polynomial[BigFraction](List(qxy))
+  println("pxy", pxy)
+  println("pxy2-pxy", pxy*pxy - pxy)
+
 
 
 }
