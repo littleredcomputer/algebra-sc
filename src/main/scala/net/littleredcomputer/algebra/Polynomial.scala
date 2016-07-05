@@ -19,8 +19,17 @@ case class Monomial[T] (coefficient: T, exponents: Vector[Int]) (implicit R: Rin
 
 object Monomial {
   object Ordering {
+    object Lex extends  Ordering[Monomial[_]] {
+      override def compare(x: Monomial[_], y: Monomial[_]) = {
+        val diff = (y.exponents, x.exponents).zipped map (_-_) dropWhile (_ == 0)
+        if (diff.isEmpty) 0 else diff.head
+      }
+    }
     object GrLex extends Ordering[Monomial[_]] {
-      override def compare(x: Monomial[_], y: Monomial[_]): Int = y.degree - x.degree
+      override def compare(x: Monomial[_], y: Monomial[_]): Int = {
+        val grade = y.degree - x.degree
+        if (grade != 0) grade else Lex.compare(x, y)
+      }
     }
   }
 }
