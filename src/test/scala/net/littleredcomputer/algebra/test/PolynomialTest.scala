@@ -3,7 +3,7 @@ package net.littleredcomputer.algebra.test
 import net.littleredcomputer.algebra.{Monomial, Polynomial, Ring}
 import org.apache.commons.math3.fraction.BigFraction
 import org.scalacheck.{Arbitrary, Gen, Properties, Test}
-import org.scalacheck.Prop.forAll
+import org.scalacheck.Prop.{forAll, BooleanOperators}
 import org.scalatest._
 import org.scalacheck.Gen._
 import org.scalacheck.Test.Parameters
@@ -20,8 +20,8 @@ object Implicits {
     def sizedPoly(sz: Int) = for {
       exponents <- Gen.listOfN(sz, Gen.listOfN(arity, choose(0, 6)))
       coefficients <- Gen.listOfN(sz, Arbitrary.arbitrary[T])
-    } yield Polynomial((coefficients, exponents).zipped map {
-      case (c, xs) => Monomial(c, xs.toVector)
+    } yield Polynomial.make((coefficients, exponents).zipped map {
+      case (c, xs) => Monomial.make(c, xs)
     })
 
     Gen.sized(sizedPoly)
@@ -29,17 +29,17 @@ object Implicits {
 }
 
 class MonomialOrderTest extends FlatSpec with Matchers {
-  val x3 = Monomial(1, Vector(3, 0, 0))
-  val z2 = Monomial(1, Vector(0, 0, 2))
-  val x3y = Monomial(1, Vector(3, 1, 0))
-  val x3z = Monomial(1, Vector(3, 0, 1))
-  val x3z2 = Monomial(1, Vector(3, 0, 2))
-  val x2y2z = Monomial(1, Vector(2, 2, 1))
-  val x2yz2 = Monomial(1, Vector(2, 1, 2))
-  val x2z2 = Monomial(1, Vector(2, 0, 2))
-  val x2z = Monomial(1, Vector(2, 0, 1))
-  val x2 = Monomial(1, Vector(2, 0, 0))
-  val xy2z = Monomial(1, Vector(1, 2, 1))
+  val x3 = Monomial.make(1, List(3, 0, 0))
+  val z2 = Monomial.make(1, List(0, 0, 2))
+  val x3y = Monomial.make(1, List(3, 1, 0))
+  val x3z = Monomial.make(1, List(3, 0, 1))
+  val x3z2 = Monomial.make(1, List(3, 0, 2))
+  val x2y2z = Monomial.make(1, List(2, 2, 1))
+  val x2yz2 = Monomial.make(1, List(2, 1, 2))
+  val x2z2 = Monomial.make(1, List(2, 0, 2))
+  val x2z = Monomial.make(1, List(2, 0, 1))
+  val x2 = Monomial.make(1, List(2, 0, 0))
+  val xy2z = Monomial.make(1, List(1, 2, 1))
 
   "Lex order" should "work" in {
     val f = Monomial.Ordering.Lex.compare _
@@ -57,23 +57,34 @@ class MonomialOrderTest extends FlatSpec with Matchers {
 
 class PolynomialSuite extends FlatSpec with Matchers {
 
-  val x = Monomial(1,Vector(1))
+  val x = Monomial.make(1, List(1))
+  val one = Monomial.make(1, List(0))
+  val z = Polynomial.zero[Int]
   "Monomial multiplication" should "be commutative" in {
-    val y = Monomial(1,Vector(2))
+    val y = Monomial.make(1, List(2))
     x * y should be (y * x)
   }
 
   "The zero polynomial" should "annihilate any other" in {
     val p = Polynomial(List(x))
-    val z = Polynomial.zero[Int]
     p * z should be (z)
     z * p should be (z)
+  }
+
+  "Simple divisions" should "work" in {
+    val x2m1 = Polynomial(List(x*x, -one))
+    val xp1 = Polynomial(List(x, one))
+    val xm1 = Polynomial(List(x, -one))
+    x2m1 divide xp1 should be (xm1, z)
+    x2m1 divide xm1 should be (xp1, z)
+
   }
 }
 
 object PTestZ extends Properties("Polynomial[Int]") {
   import Implicits.arbitraryPolynomial
   type Zx = Polynomial[Int]
+  val z = Polynomial.zero[Int]
   for (x <- 1 to 3) {
     implicit val arity = x
     property("+ is commutative a=" + arity) = forAll {
@@ -85,18 +96,33 @@ object PTestZ extends Properties("Polynomial[Int]") {
     property("* distributes over + a=" + arity) = forAll {
       (p: Zx, q: Zx, r: Zx) => p * (q + r) == p * q + p * r
     }
+    property("p - p == 0, a=" + arity) = forAll {
+      (p: Zx) => p - p == z
+    }
+    property("0p = 0, a=" + arity) = forAll {
+      (p: Zx) => p * z == z
+    }
+  }
+}
+
+object DivTestZ extends Properties("DivTest[BigZ]") {
+  import Implicits.arbitraryPolynomial
+  for (x <- 1 to 3) {
+    implicit val arity = x
+    type BZx = Polynomial[BigInt]
+    val z = Polynomial.zero[BigInt]
+    property("pq / p == q, a=" + arity) = forAll {
+      (p: BZx, q: BZx) => (p != z && q != z) ==> (((p * q) divide p) == (q, z))
+    }
   }
 }
 
 object PTestQ extends Properties("Polynomial[BigFraction]") {
-
-  val p = Test.Parameters.default.withMinSuccessfulTests(10)
-  overrideParameters(p)
-  type Qx = Polynomial[BigFraction]
-  val z: Qx = Polynomial.zero[BigFraction]
-
   import Implicits.arbitraryRational
   import Implicits.arbitraryPolynomial
+  override def overrideParameters(p: Parameters): Parameters = p.withMinSuccessfulTests(25)
+  type Qx = Polynomial[BigFraction]
+
   for (x <- 1 to 3) {
     implicit val arity = x
     property("+ is commutative a=" + arity) = forAll {
