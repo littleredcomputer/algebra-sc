@@ -3,10 +3,11 @@ package net.littleredcomputer.algebra.test
 import net.littleredcomputer.algebra.{Monomial, Polynomial, Ring}
 import org.apache.commons.math3.fraction.BigFraction
 import org.scalacheck.{Arbitrary, Gen, Properties, Test}
-import org.scalacheck.Prop.{forAll, BooleanOperators}
+import org.scalacheck.Prop.{BooleanOperators, forAll}
 import org.scalatest._
 import org.scalacheck.Gen._
 import org.scalacheck.Test.Parameters
+import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
 object Implicits {
   implicit val arbitraryRational: Arbitrary[BigFraction] = Arbitrary { for {
@@ -80,6 +81,22 @@ class PolynomialSuite extends FlatSpec with Matchers {
 
   }
 }
+
+// Tricky to figure out how to supply the necessary implicits to this style of test!
+//class PTestZ2 extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
+//  implicit val arity = 2
+//  import Implicits.arbitraryPolynomial
+//  val z = Polynomial.zero[Int]
+//  type Zx = Polynomial[Int]
+//  forAll { (p: Polynomial[Int], q: Polynomial[Int]) =>
+//    p + q should be (q + p)
+//  } (generatorDrivenConfig, Implicits.arbitraryPolynomial[Int], null, Implicits.arbitraryPolynomial[Int], null)
+////  forAll (Implicits.arbitraryPolynomial[Int], Implicits.arbitraryPolynomial[Int]) {
+////    (p: Polynomial[Int], q: Polynomial[Int]) =>
+////      p + q should be (q + p)
+////  }
+//
+//}
 
 object PTestZ extends Properties("Polynomial[Int]") {
   import Implicits.arbitraryPolynomial
