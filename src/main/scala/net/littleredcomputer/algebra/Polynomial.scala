@@ -38,8 +38,10 @@ case class Polynomial[R] private (ms: List[Monomial[R]])
   // CL&O in full form. Can we get this done in functional style? That'll be a challenge.
   def divide(ys: Seq[Polynomial[R]]) = ???
   def lower (implicit Rx: Ring[Polynomial[R]]) = {
-    Polynomial.make((for ((x, ps) <- ms groupBy (_.exponents.head))
-      yield Monomial.make(Polynomial(ps), List(x))
+    Polynomial.make((for ((x, xs) <- ms groupBy (_.exponents.head))
+      yield Monomial.make(Polynomial(xs map {
+        case Monomial(c, ys) => Monomial(c, ys.tail)
+      }), List(x))
     ).toList)
   }
 }

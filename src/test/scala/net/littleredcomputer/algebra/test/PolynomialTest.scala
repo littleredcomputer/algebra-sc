@@ -2,12 +2,11 @@ package net.littleredcomputer.algebra.test
 
 import net.littleredcomputer.algebra.{Monomial, Polynomial, Ring}
 import org.apache.commons.math3.fraction.BigFraction
-import org.scalacheck.{Arbitrary, Gen, Properties, Test}
+import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop.{BooleanOperators, forAll}
 import org.scalatest._
 import org.scalacheck.Gen._
 import org.scalacheck.Test.Parameters
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
 object Implicits {
   implicit val arbitraryRational: Arbitrary[BigFraction] = Arbitrary { for {
