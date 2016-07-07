@@ -7,16 +7,17 @@ import scala.collection.mutable
   */
 
 
-case class Monomial[T] private (coefficient: T, exponents: mutable.WrappedArray[Int])
-                               (implicit R: Ring[T]) {
+case class Monomial[R] private (coefficient: R, exponents: mutable.WrappedArray[Int])
+                               (implicit R: Ring[R]) {
   val arity = exponents.length
   val degree = exponents.sum
-  def *(y: Monomial[T]) = {
+  def *(y: Monomial[R]) = {
     require(arity == y.arity)
     Monomial(R.*(coefficient, y.coefficient), (exponents, y.exponents).zipped map (_+_))
   }
-  def unary_- = Monomial[T](R.unary_-(coefficient), exponents)
-  def /?(y: Monomial[T]): Option[Monomial[T]] = {
+  def map(f: R => R) = Monomial(f(coefficient), exponents)
+  def unary_- = map(R.unary_-)
+  def /?(y: Monomial[R]): Option[Monomial[R]] = {
     require(arity == y.arity)
     val qx = (exponents, y.exponents).zipped map (_-_)
     if (qx.forall(_ >= 0)) { R./?(coefficient, y.coefficient) match {
@@ -29,7 +30,7 @@ case class Monomial[T] private (coefficient: T, exponents: mutable.WrappedArray[
 }
 
 object Monomial {
-  def make[T](coefficient: T, exponents: Seq[Int]) (implicit R: Ring[T]): Monomial[T] =
+  def make[R](coefficient: R, exponents: Seq[Int]) (implicit R: Ring[R]): Monomial[R] =
     Monomial(coefficient, exponents.toArray)
   object Ordering {
     object Lex extends Ordering[Monomial[_]] {

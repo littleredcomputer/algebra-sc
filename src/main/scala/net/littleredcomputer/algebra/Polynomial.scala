@@ -9,33 +9,38 @@ import org.apache.commons.math3.fraction.BigFraction
 import scala.annotation.tailrec
 import scala.collection.mutable
 
-
-case class Polynomial[T] private (ms: List[Monomial[T]])
-                                 (implicit R: Ring[T]) {
+case class Polynomial[R] private (ms: List[Monomial[R]])
+                                 (implicit R: Ring[R]) {
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
-  def +(y: Polynomial[T]) = Polynomial.make(ms ++ y.ms)
-  def *(y: Polynomial[T]) = Polynomial.make(for {
+  def +(y: Polynomial[R]) = Polynomial.make(ms ++ y.ms)
+  def *(y: Polynomial[R]) = Polynomial.make(for {
     x <- ms
     y <- y.ms
   } yield x * y)
-  def unary_- = Polynomial.make(ms map {
-    case Monomial(c, es) => Monomial(R.unary_-(c), es)
-  })
-  def -(y: Polynomial[T]) = this + (-y)
+  def map(f: R => R) = Polynomial.make(ms map (_ map f))
+  def unary_- = map(R.unary_-)
+  def -(y: Polynomial[R]) = this + (-y)
   def isZero = ms.isEmpty
   def leadingTerm = ms.head
-  def divide(y: Polynomial[T]) = {
+  def divide(y: Polynomial[R]) = {
     // Cox, Little & O'Shea "Ideals, Varieties and Algorithms" 2.3 Theorem 3
-    @tailrec def divideStep(p: Polynomial[T], quotient: List[Monomial[T]], remainder: List[Monomial[T]]): (Polynomial[T], Polynomial[T]) = {
+    @tailrec def step(p: Polynomial[R], quotient: List[Monomial[R]], remainder: List[Monomial[R]]): (Polynomial[R], Polynomial[R]) = {
       if (p.isZero) (Polynomial.make(quotient), Polynomial.make(remainder)) else {
         p.leadingTerm /? y.leadingTerm match {
-          case Some(q) => divideStep(p - Polynomial[T](List(q)) * y, q :: quotient, remainder)
-          case None => divideStep(p - Polynomial[T](List(p.leadingTerm)), quotient, p.leadingTerm :: remainder)
+          case Some(q) => step(p - Polynomial[R](List(q)) * y, q :: quotient, remainder)
+          case None => step(p - Polynomial[R](List(p.leadingTerm)), quotient, p.leadingTerm :: remainder)
         }
       }
     }
-    divideStep(this, List(), List())
+    step(this, List(), List())
+  }
+  // CL&O in full form. Can we get this done in functional style? That'll be a challenge.
+  def divide(ys: Seq[Polynomial[R]]) = ???
+  def lower (implicit Rx: Ring[Polynomial[R]]) = {
+    Polynomial.make((for ((x, ps) <- ms groupBy (_.exponents.head))
+      yield Monomial.make(Polynomial(ps), List(x))
+    ).toList)
   }
 }
 
@@ -74,6 +79,7 @@ object MyApp extends App {
   println(xyxy2x2x.degree)
 
 
+
   val p = Polynomial.make(List(xy))
   println("p", p)
   val q = Polynomial.make(List(x, xy))
@@ -87,6 +93,7 @@ object MyApp extends App {
   println("z", z)
   println("z.ms", z.ms)
   println("z.ms.head", z.ms.head)
+  println("z.lower", z.lower)
 
   println("o1", Monomial.Ordering.GrLex.compare(x, xy))
   println("o2", Monomial.Ordering.GrLex.compare(xy, x))
