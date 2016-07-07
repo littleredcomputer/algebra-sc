@@ -9,8 +9,14 @@ import org.apache.commons.math3.fraction.BigFraction
 import scala.annotation.tailrec
 import scala.collection.mutable
 
-case class Polynomial[R] private (ms: List[Monomial[R]])
-                                 (implicit R: Ring[R]) {
+case class Polynomial[R] private (ms: List[Monomial[R]]) (implicit R: Ring[R]) {
+  // the monomials of a polynomial must all have the same arity.
+  private def computeArity = {
+    val arities = (ms map (_.exponents.length)).distinct
+    require(arities.length <= 1, "All monomials of a polynomial must have the same arity")
+    arities.headOption.getOrElse(0)
+  }
+  val arity: Int = computeArity
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
   def +(y: Polynomial[R]) = Polynomial.make(ms ++ y.ms)
@@ -24,7 +30,7 @@ case class Polynomial[R] private (ms: List[Monomial[R]])
   def isZero = ms.isEmpty
   def leadingTerm = ms.head
   def divide(y: Polynomial[R]) = {
-    // Cox, Little & O'Shea "Ideals, Varieties and Algorithms" 2.3 Theorem 3
+    // Cox, Little & O'Shea "Ideals, Varieties and Algorithms" 2.3 Theorem 3 (1 divisor)
     @tailrec def step(p: Polynomial[R], quotient: List[Monomial[R]], remainder: List[Monomial[R]]): (Polynomial[R], Polynomial[R]) = {
       if (p.isZero) (Polynomial.make(quotient), Polynomial.make(remainder)) else {
         p.leadingTerm /? y.leadingTerm match {
@@ -36,13 +42,23 @@ case class Polynomial[R] private (ms: List[Monomial[R]])
     step(this, List(), List())
   }
   // CL&O in full form. Can we get this done in functional style? That'll be a challenge.
-  def divide(ys: Seq[Polynomial[R]]) = ???
-  def lower (implicit Rx: Ring[Polynomial[R]]) = {
+  def divide(ys: Seq[Polynomial[R]]) = ???  // er, haven't started this yet
+  def lower(implicit Rx: Ring[Polynomial[R]]) = {
     Polynomial.make((for ((x, xs) <- ms groupBy (_.exponents.head))
-      yield Monomial.make(Polynomial(xs map {
-        case Monomial(c, ys) => Monomial(c, ys.tail)
-      }), List(x))
+      yield Monomial.make(Polynomial(xs map {_ mapx (_.tail)}), List(x))
     ).toList)
+  }
+  // Are we in trouble? How do we type evaluate so that
+  // given a p in P[P[R]] and an x in R, we get a P[R]?
+  // We would need a scalar multiplication operation
+  // defined on R x P[R} -> P[R} to get this to work.
+  // This suggests that the type of the evaluation variable
+  // is  a completely different type and we need some kind
+  // of implicit or combinator to represent this vector
+  // space operation.
+  def evaluate[S](x: Ring[S]) (implicit S: Ring[S]): R = {
+    var s: S = S.zero
+    ???
   }
 }
 
@@ -96,6 +112,8 @@ object MyApp extends App {
   println("z.ms", z.ms)
   println("z.ms.head", z.ms.head)
   println("z.lower", z.lower)
+  println("z.arity", z.arity)
+  println("z.lower.arity", z.lower.arity)
 
   println("o1", Monomial.Ordering.GrLex.compare(x, xy))
   println("o2", Monomial.Ordering.GrLex.compare(xy, x))
