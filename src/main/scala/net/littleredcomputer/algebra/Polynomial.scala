@@ -6,6 +6,7 @@ package net.littleredcomputer.algebra
 
 import org.apache.commons.math3.fraction.BigFraction
 
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 
@@ -66,22 +67,15 @@ case class Polynomial[T] private (ms: List[Monomial[T]])
   def leadingTerm = ms.head
   def divide(y: Polynomial[T]) = {
     // Cox, Little & O'Shea "Ideals, Varieties and Algorithms" 2.3 Theorem 3
-    var quotient, remainder = List[Monomial[T]]()
-    //var remainder = List[Monomial[T]]()
-    var p = this
-    while (!p.isZero) {
-      p.leadingTerm /? y.leadingTerm match {
-        case Some(q) => {
-          quotient = q :: quotient
-          p -= Polynomial[T](List(q)) * y
-        }
-        case None => {
-          remainder = p.leadingTerm :: remainder
-          p -= Polynomial[T](List(p.leadingTerm))
+    @tailrec def divideStep(p: Polynomial[T], quotient: List[Monomial[T]], remainder: List[Monomial[T]]): (Polynomial[T], Polynomial[T]) = {
+      if (p.isZero) (Polynomial.make(quotient), Polynomial.make(remainder)) else {
+        p.leadingTerm /? y.leadingTerm match {
+          case Some(q) => divideStep(p - Polynomial[T](List(q)) * y, q :: quotient, remainder)
+          case None => divideStep(p - Polynomial[T](List(p.leadingTerm)), quotient, p.leadingTerm :: remainder)
         }
       }
     }
-    (Polynomial.make(quotient), Polynomial.make(remainder))
+    divideStep(this, List(), List())
   }
 }
 
