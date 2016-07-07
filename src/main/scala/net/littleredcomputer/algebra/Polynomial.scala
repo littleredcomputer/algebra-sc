@@ -7,7 +7,6 @@ package net.littleredcomputer.algebra
 import org.apache.commons.math3.fraction.BigFraction
 
 import scala.annotation.tailrec
-import scala.collection.mutable
 
 case class Polynomial[R] private (ms: List[Monomial[R]]) (implicit R: Ring[R]) {
   // the monomials of a polynomial must all have the same arity.
@@ -24,7 +23,7 @@ case class Polynomial[R] private (ms: List[Monomial[R]]) (implicit R: Ring[R]) {
     x <- ms
     y <- y.ms
   } yield x * y)
-  def map(f: R => R) = Polynomial.make(ms map (_ map f))
+  def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](ms map (_ map f))
   def unary_- = map(R.unary_-)
   def -(y: Polynomial[R]) = this + (-y)
   def isZero = ms.isEmpty

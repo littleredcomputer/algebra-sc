@@ -15,7 +15,7 @@ case class Monomial[R] private (coefficient: R, exponents: mutable.WrappedArray[
     require(arity == y.arity)
     Monomial(R.*(coefficient, y.coefficient), (exponents, y.exponents).zipped map (_+_))
   }
-  def map(f: R => R) = Monomial(f(coefficient), exponents)
+  def map[S](f: R => S) (implicit S: Ring[S]) = Monomial[S](f(coefficient), exponents)
   def mapx(f: Seq[Int] => Seq[Int]) = Monomial(coefficient, f(exponents).toArray)
   def unary_- = map(R.unary_-)
   def /?(y: Monomial[R]): Option[Monomial[R]] = {
