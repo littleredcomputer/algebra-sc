@@ -55,8 +55,7 @@ class MonomialOrderTest extends FlatSpec with Matchers {
   }
 }
 
-class PolynomialSuite extends FlatSpec with Matchers {
-
+class MonomialSuite extends FlatSpec with Matchers {
   val x = Monomial(List(1))
   "Monomial multiplication" should "be commutative" in {
     val y = Monomial(List(2))
@@ -70,13 +69,51 @@ class PolynomialSuite extends FlatSpec with Matchers {
     p * z should be (z)
     z * p should be (z)
   }
+}
 
+class UnivariateSuite extends FlatSpec with Matchers {
+  val x = Monomial(List(1))
+  val one = Term(1, Monomial(List(0)))
+  val z = Polynomial.zero[Int]
   "Simple divisions" should "work" in {
     val x2m1 = Polynomial(List(Term(1, x*x), -one))
     val xp1 = Polynomial(List(Term(1, x), one))
     val xm1 = Polynomial(List(Term(1, x), -one))
     x2m1 divide xp1 should be (xm1, z)
     x2m1 divide xm1 should be (xp1, z)
+  }
+}
+
+class PolynomialSuite extends FlatSpec with Matchers {
+  val one = Polynomial(List(Term(1, Monomial(List(0,0)))))
+  val x = Polynomial(List(Term(1, Monomial(List(1,0)))))
+  val y = Polynomial(List(Term(1, Monomial(List(0,1)))))
+  "Multiple quotient divisions" should "pass Ex.1 (p.61)" in {
+    // CLO p.61
+    val f = x*y*y + one
+    val f1 = x*y + one
+    val f2 = y + one
+    f divide List(f1, f2) should be (List(y, -one), one * 2)
+  }
+  it should "pass Ex.2 (p.62)" in {
+    val f = x*x*y + x*y*y + y*y
+    val f1 = x*y - one
+    val f2 = y*y - one
+    f divide List(f1, f2) should  be (List(x + y, one), x + y + one)
+  }
+  it should "pass Ex.4 (p.66)" in {
+    val f = x*x*y + x*y*y + y*y
+    val f1 = y*y - one
+    val f2 = x*y - one
+    f divide List(f1, f2) should be (List(x + one, x), x + x + one)
+  }
+  it should "pass Ex.5 (p.67)" in {
+    val f = x*y*y - x
+    val f1 = x*y + one
+    val f2 = y*y - one
+    val zero = Polynomial.zero[Int]
+    f divide List(f1, f2) should be (List(y, zero), - x - y)
+    f divide List(f2, f1) should be (List(x, zero), zero)
   }
 }
 

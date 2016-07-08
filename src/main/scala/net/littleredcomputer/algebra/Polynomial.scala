@@ -23,13 +23,29 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
     x <- terms
     y <- y.terms
   } yield x * y)
+  def *(y: R) = map(c => R.*(y, c))
   def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
   def -(y: Polynomial[R]) = this + (-y)
   def isZero = terms.isEmpty
   def leadingTerm = terms.head
+  def divide(ys: Seq[Polynomial[R]]) = {
+    // Cox, Little & O'Shea "Ideals, Varieties and Algorithms 2.3 Theorem 3
+    @tailrec def step(p: Polynomial[R], qs: List[List[Term[R]]], remainder: List[Term[R]]): (List[Polynomial[R]], Polynomial[R]) = {
+      if (p.isZero) (qs map Polynomial.make[R], Polynomial.make(remainder)) else {
+        val i = ys.indexWhere(y => (p.leadingTerm /? y.leadingTerm).isDefined)
+        if (i < 0) step(p - Polynomial(List(p.leadingTerm)), qs, p.leadingTerm :: remainder)
+        else {
+          val y = ys(i)
+          val q = (p.leadingTerm /? y.leadingTerm).get
+          step(p - Polynomial(List(q)) * y, qs.updated(i, q :: qs(i)), remainder)
+        }
+      }
+    }
+    step(this, (ys map (_ => List())).toList, List())
+  }
   def divide(y: Polynomial[R]) = {
-    // Cox, Little & O'Shea "Ideals, Varieties and Algorithms" 2.3 Theorem 3 (simplified for 1 divisor)
+    // The CLO algorithm above, simplified for a single divisor.
     @tailrec def step(p: Polynomial[R], quotient: List[Term[R]], remainder: List[Term[R]]): (Polynomial[R], Polynomial[R]) = {
       if (p.isZero) (Polynomial.make(quotient), Polynomial.make(remainder)) else {
         p.leadingTerm /? y.leadingTerm match {
@@ -40,11 +56,9 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
     }
     step(this, List(), List())
   }
-  // CL&O in full form. Can we get this done in functional style? That'll be a challenge.
-  def divide(ys: Seq[Polynomial[R]]) = ???  // er, haven't started this yet
   def lower(implicit Rx: Ring[Polynomial[R]]) = {
     Polynomial.make((for ((x, qs) <- terms groupBy (_.monomial.exponents.head))
-      yield Term(Polynomial(qs map {_.mapm (_.tail)}), Monomial(List(x)))
+      yield Term(Polynomial.make(qs map {_.mapm (_.tail)}), Monomial(List(x)))
     ).toList)
   }
   // Are we in trouble? How do we type evaluate so that

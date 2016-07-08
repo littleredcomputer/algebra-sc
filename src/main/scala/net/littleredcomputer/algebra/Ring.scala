@@ -25,7 +25,6 @@ object Ring {
       if (x % y == 0) Some(x/y) else None
     }
     def expt(x: Int, y: Int) = (1 /: (1 to y)) { (v, _) => *(v, x) }  // slow. But the Ints are going to overflow anyway.
-
   }
   implicit object BigZ extends Ring[BigInt] {
     def zero = 0
