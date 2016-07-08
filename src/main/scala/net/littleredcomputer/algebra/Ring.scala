@@ -11,6 +11,7 @@ trait Ring[T] {
   def +(x: T, y: T): T
   def unary_-(x: T): T
   def /?(x: T, y: T): Option[T]
+  def expt(x: T, y: Int): T
 }
 
 object Ring {
@@ -23,6 +24,8 @@ object Ring {
       require(y != 0)
       if (x % y == 0) Some(x/y) else None
     }
+    def expt(x: Int, y: Int) = (1 /: (1 to y)) { (v, _) => *(v, x) }  // slow. But the Ints are going to overflow anyway.
+
   }
   implicit object BigZ extends Ring[BigInt] {
     def zero = 0
@@ -33,6 +36,7 @@ object Ring {
       require(y != 0)
       if (x % y == 0) Some(x/y) else None
     }
+    def expt(x: BigInt, y: Int) = ???
   }
   implicit object R extends Ring[Double] {
     def zero = 0.0
@@ -43,6 +47,7 @@ object Ring {
       require(y != 0)
       Some(x/y)
     }
+    def expt(x: Double, y: Int) = Math.pow(x, y)
   }
   implicit object Zx extends Ring[Polynomial[Int]] {
     def zero = Polynomial.make[Int](List())
@@ -50,6 +55,7 @@ object Ring {
     def +(x: Polynomial[Int], y: Polynomial[Int]) = x + y
     def unary_-(x: Polynomial[Int]) = -x
     def /?(x: Polynomial[Int], y: Polynomial[Int]) = ???
+    def expt(x: Polynomial[Int], y: Int) = ???
   }
   implicit object Q extends Ring[BigFraction] {
     def zero = BigFraction.ZERO
@@ -60,5 +66,6 @@ object Ring {
       require(y != BigFraction.ZERO)
       Some(x.divide(y))
     }
+    def expt(x: BigFraction, y: Int) = x.pow(y)
   }
 }

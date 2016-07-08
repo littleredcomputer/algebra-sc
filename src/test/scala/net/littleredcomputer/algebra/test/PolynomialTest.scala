@@ -1,6 +1,6 @@
 package net.littleredcomputer.algebra.test
 
-import net.littleredcomputer.algebra.{Monomial, Polynomial, Ring}
+import net.littleredcomputer.algebra.{Monomial, Polynomial, Ring, Term}
 import org.apache.commons.math3.fraction.BigFraction
 import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalacheck.Prop.{BooleanOperators, forAll}
@@ -21,7 +21,7 @@ object Implicits {
       exponents <- Gen.listOfN(sz, Gen.listOfN(arity, choose(0, 6)))
       coefficients <- Gen.listOfN(sz, Arbitrary.arbitrary[T])
     } yield Polynomial.make((coefficients, exponents).zipped map {
-      case (c, xs) => Monomial.make(c, xs)
+      case (c, xs) => Term(c, Monomial(xs))
     })
 
     Gen.sized(sizedPoly)
@@ -29,17 +29,17 @@ object Implicits {
 }
 
 class MonomialOrderTest extends FlatSpec with Matchers {
-  val x3 = Monomial.make(1, List(3, 0, 0))
-  val z2 = Monomial.make(1, List(0, 0, 2))
-  val x3y = Monomial.make(1, List(3, 1, 0))
-  val x3z = Monomial.make(1, List(3, 0, 1))
-  val x3z2 = Monomial.make(1, List(3, 0, 2))
-  val x2y2z = Monomial.make(1, List(2, 2, 1))
-  val x2yz2 = Monomial.make(1, List(2, 1, 2))
-  val x2z2 = Monomial.make(1, List(2, 0, 2))
-  val x2z = Monomial.make(1, List(2, 0, 1))
-  val x2 = Monomial.make(1, List(2, 0, 0))
-  val xy2z = Monomial.make(1, List(1, 2, 1))
+  val x3 = Monomial(List(3, 0, 0))
+  val z2 = Monomial(List(0, 0, 2))
+  val x3y = Monomial(List(3, 1, 0))
+  val x3z = Monomial(List(3, 0, 1))
+  val x3z2 = Monomial(List(3, 0, 2))
+  val x2y2z = Monomial(List(2, 2, 1))
+  val x2yz2 = Monomial(List(2, 1, 2))
+  val x2z2 = Monomial(List(2, 0, 2))
+  val x2z = Monomial(List(2, 0, 1))
+  val x2 = Monomial(List(2, 0, 0))
+  val xy2z = Monomial(List(1, 2, 1))
 
   "Lex order" should "work" in {
     val f = Monomial.Ordering.Lex.compare _
@@ -57,27 +57,26 @@ class MonomialOrderTest extends FlatSpec with Matchers {
 
 class PolynomialSuite extends FlatSpec with Matchers {
 
-  val x = Monomial.make(1, List(1))
-  val one = Monomial.make(1, List(0))
-  val z = Polynomial.zero[Int]
+  val x = Monomial(List(1))
   "Monomial multiplication" should "be commutative" in {
-    val y = Monomial.make(1, List(2))
+    val y = Monomial(List(2))
     x * y should be (y * x)
   }
+  val one = Term(1, Monomial(List(0)))
+  val z = Polynomial.zero[Int]
 
   "The zero polynomial" should "annihilate any other" in {
-    val p = Polynomial(List(x))
+    val p = Polynomial(List(Term(1, x)))
     p * z should be (z)
     z * p should be (z)
   }
 
   "Simple divisions" should "work" in {
-    val x2m1 = Polynomial(List(x*x, -one))
-    val xp1 = Polynomial(List(x, one))
-    val xm1 = Polynomial(List(x, -one))
+    val x2m1 = Polynomial(List(Term(1, x*x), -one))
+    val xp1 = Polynomial(List(Term(1, x), one))
+    val xm1 = Polynomial(List(Term(1, x), -one))
     x2m1 divide xp1 should be (xm1, z)
     x2m1 divide xm1 should be (xp1, z)
-
   }
 }
 
@@ -126,9 +125,8 @@ object DivTestZ extends Properties("DivTest[BigZ]") {
   for (x <- 1 to 3) {
     implicit val arity = x
     type BZx = Polynomial[BigInt]
-    val z = Polynomial.zero[BigInt]
     property("pq / p == q, a=" + arity) = forAll {
-      (p: BZx, q: BZx) => (p != z && q != z) ==> (((p * q) divide p) == (q, z))
+      (p: BZx, q: BZx) => (!p.isZero && !q.isZero) ==> (((p * q) divide p) == (q, Polynomial.zero[BigInt]))
     }
   }
 }

@@ -8,33 +8,33 @@ import org.apache.commons.math3.fraction.BigFraction
 
 import scala.annotation.tailrec
 
-case class Polynomial[R] private (ms: List[Monomial[R]]) (implicit R: Ring[R]) {
+case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   // the monomials of a polynomial must all have the same arity.
   private def computeArity = {
-    val arities = (ms map (_.exponents.length)).distinct
+    val arities = (terms map (_.monomial.arity)).distinct
     require(arities.length <= 1, "All monomials of a polynomial must have the same arity")
     arities.headOption.getOrElse(0)
   }
-  val arity: Int = computeArity
+  lazy val arity: Int = computeArity
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
-  def +(y: Polynomial[R]) = Polynomial.make(ms ++ y.ms)
+  def +(y: Polynomial[R]) = Polynomial.make(terms ++ y.terms)
   def *(y: Polynomial[R]) = Polynomial.make(for {
-    x <- ms
-    y <- y.ms
+    x <- terms
+    y <- y.terms
   } yield x * y)
-  def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](ms map (_ map f))
+  def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
   def -(y: Polynomial[R]) = this + (-y)
-  def isZero = ms.isEmpty
-  def leadingTerm = ms.head
+  def isZero = terms.isEmpty
+  def leadingTerm = terms.head
   def divide(y: Polynomial[R]) = {
-    // Cox, Little & O'Shea "Ideals, Varieties and Algorithms" 2.3 Theorem 3 (1 divisor)
-    @tailrec def step(p: Polynomial[R], quotient: List[Monomial[R]], remainder: List[Monomial[R]]): (Polynomial[R], Polynomial[R]) = {
+    // Cox, Little & O'Shea "Ideals, Varieties and Algorithms" 2.3 Theorem 3 (simplified for 1 divisor)
+    @tailrec def step(p: Polynomial[R], quotient: List[Term[R]], remainder: List[Term[R]]): (Polynomial[R], Polynomial[R]) = {
       if (p.isZero) (Polynomial.make(quotient), Polynomial.make(remainder)) else {
         p.leadingTerm /? y.leadingTerm match {
-          case Some(q) => step(p - Polynomial[R](List(q)) * y, q :: quotient, remainder)
-          case None => step(p - Polynomial[R](List(p.leadingTerm)), quotient, p.leadingTerm :: remainder)
+          case Some(q) => step(p - Polynomial(List(q)) * y, q :: quotient, remainder)
+          case None => step(p - Polynomial(List(p.leadingTerm)), quotient, p.leadingTerm :: remainder)
         }
       }
     }
@@ -43,8 +43,8 @@ case class Polynomial[R] private (ms: List[Monomial[R]]) (implicit R: Ring[R]) {
   // CL&O in full form. Can we get this done in functional style? That'll be a challenge.
   def divide(ys: Seq[Polynomial[R]]) = ???  // er, haven't started this yet
   def lower(implicit Rx: Ring[Polynomial[R]]) = {
-    Polynomial.make((for ((x, xs) <- ms groupBy (_.exponents.head))
-      yield Monomial.make(Polynomial(xs map {_ mapx (_.tail)}), List(x))
+    Polynomial.make((for ((x, qs) <- terms groupBy (_.monomial.exponents.head))
+      yield Term(Polynomial(qs map {_.mapm (_.tail)}), Monomial(List(x)))
     ).toList)
   }
   // Are we in trouble? How do we type evaluate so that
@@ -55,20 +55,29 @@ case class Polynomial[R] private (ms: List[Monomial[R]]) (implicit R: Ring[R]) {
   // is  a completely different type and we need some kind
   // of implicit or combinator to represent this vector
   // space operation.
-  def evaluate[S](x: Ring[S]) (implicit S: Ring[S]): R = {
-    var s: S = S.zero
-    ???
+  def evaluate(x: R): R = {
+    require(arity == 1)
+    (R.zero /: terms) {
+      case (sum, Term(c, m)) => R.+(sum, R.*(c, R.expt(x, m.exponents.head)))
+    }
   }
+  //  def evaluate(xs: Array[R]): R = {
+  //    require(arity == xs.length)
+  //    (R.zero /: ts) {
+  //      case (sum, Term(c, m)) =>
+  //        (R.one /: m.exponents)
+  //    }
+  //  }
 }
 
 object Polynomial {
-  def make[T](ms: Seq[Monomial[T]]) (implicit R: Ring[T]) = {
+  def make[T](ms: Seq[Term[T]]) (implicit R: Ring[T]) = {
     val terms = for {
-      (xs, cs) <- ms groupBy (_.exponents)
-      c = (R.zero /: cs)((sum, m) => R.+(sum, m.coefficient))
+      (xs, cs) <- ms groupBy (_.monomial.exponents)
+      c = (R.zero /: cs)((sum, c) => R.+(sum, c.coefficient))
       if c != R.zero
-    } yield Monomial(c, xs)
-    Polynomial(terms.toList.sorted(Monomial.Ordering.GrLex))
+    } yield Term(c, Monomial(xs))
+    Polynomial(terms.toList.sortBy(_.monomial)(Monomial.Ordering.GrLex))
   }
   // experiment with variance: why can't a Polynomial[Nothing] serve as a zero element?
   def zero[T]() (implicit R: Ring[T]) = make[T](List())
@@ -76,11 +85,20 @@ object Polynomial {
 
 object MyApp extends App {
 
-  val x = Monomial.make(1, List(1,0))
-  val y = Monomial.make(1, List(0,1))
-  val twox = Monomial.make(2, List(1,0))
-  val twody = Monomial.make(2.1, List(0, 1))
-  val xy = Monomial.make[Int](1, List(1,1))
+  val w = Polynomial.make(List(Term(1, Monomial(List(1)))))
+  val one1 = Polynomial.make(List(Term(1, Monomial(List(0)))))
+  val pw = w*w - (w+w) + one1
+  println("pw", pw)
+  println("pw@4", pw.evaluate(4))
+  println("pw@-4..4", (-4 to 4) map pw.evaluate)
+  println("pw@1", pw evaluate 1)
+  println("pw@2", pw evaluate 2)
+
+  val x = Term(1, Monomial(List(1,0)))
+  val y = Term(1, Monomial(List(0,1)))
+  val twox = Term(2, Monomial(List(1,0)))
+  val twody = Term(2.1, Monomial(List(0,1)))
+  val xy = Term[Int](1, Monomial(List(1,1)))
   val x_xy = x * xy
   val xyxy = xy * xy
   val xyxyx = xyxy * x
@@ -92,10 +110,8 @@ object MyApp extends App {
   println(xyxy)
   println(xyxyx)
   println(xyxy2x2x)
-  println(xyxy2x2x.arity)
-  println(xyxy2x2x.degree)
-
-
+  println(xyxy2x2x.monomial.arity)
+  println(xyxy2x2x.monomial.degree)
 
   val p = Polynomial.make(List(xy))
   println("p", p)
@@ -108,19 +124,23 @@ object MyApp extends App {
   println("3x+2y", x3y2)
   val z = Polynomial.make(List(xyxy,x,y,x,y,xyxyx,xyxy,xyxy))
   println("z", z)
-  println("z.ms", z.ms)
-  println("z.ms.head", z.ms.head)
+  println("z.ms", z.terms)
+  println("z.ms.head", z.terms.head)
   println("z.lower", z.lower)
   println("z.arity", z.arity)
   println("z.lower.arity", z.lower.arity)
 
-  println("o1", Monomial.Ordering.GrLex.compare(x, xy))
-  println("o2", Monomial.Ordering.GrLex.compare(xy, x))
+  // naturally this doesn't work, because the types are off,
+  // even though z.lower has arity 1. We'll have to think about this.
+  // println("z.lower@1", z.lower.evaluate(1))
 
-  println(List(x,xy).sorted(Monomial.Ordering.GrLex))
-  println(List(xy,x).sorted(Monomial.Ordering.GrLex))
+  println("o1", Monomial.Ordering.GrLex.compare(x.monomial, xy.monomial))
+  println("o2", Monomial.Ordering.GrLex.compare(xy.monomial, x.monomial))
 
-  println("0", Polynomial.make(List(Monomial.make(0, List(1,0)))))
+  println(List(x,xy).sortBy(_.monomial)(Monomial.Ordering.GrLex))
+  println(List(xy,x).sortBy(_.monomial)(Monomial.Ordering.GrLex))
+
+  println("0", Polynomial.make(List(Term(0, Monomial(List(1,0))))))
   println("z+z", z+z)
   println("z*z", z*z)
   println("-z", -z)
@@ -129,22 +149,14 @@ object MyApp extends App {
   println("z-z", z - z)
   println("zz - z", z*z-z)
 
-  // Hm. well, we're learning. This is one way to bring the
-  // argument into scope. Is there a better way?
-
-  // well, that is certainly one way! So it appears the companion
-  // object is kind of privileged.
-  // But why can't we leave the type parameter off?
-
-
   val pp: Polynomial[Polynomial[Int]] = Polynomial.make(
     List(
-      Monomial.make(z, List(1)),
-      Monomial.make(z*z, List(0))))
+      Term(z, Monomial(List(1))),
+      Term(z*z, Monomial(List(0)))))
   println("Z", pp)
 
-  val qx = Monomial.make[BigFraction](BigFraction.ONE_HALF, List(1, 0))
-  val qy = Monomial.make[BigFraction](BigFraction.ONE_HALF, List(0, 1))
+  val qx = Term[BigFraction](BigFraction.ONE_HALF, Monomial(List(1, 0)))
+  val qy = Term[BigFraction](BigFraction.ONE_HALF, Monomial(List(0, 1)))
   val qxy = qx * qy
   println("qxy", qxy)
   val pxy = Polynomial[BigFraction](List(qxy))
