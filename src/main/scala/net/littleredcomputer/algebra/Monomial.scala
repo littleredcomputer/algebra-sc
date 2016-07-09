@@ -8,6 +8,7 @@ case class Monomial private (exponents: Seq[Int]) {
   val arity = exponents.length
   val degree = exponents.sum
   def *(y: Monomial) = Monomial((exponents, y.exponents).zipped map (_+_))
+  def ^(y: Int) = Monomial(exponents map (_ * y))
   def map(f: Seq[Int] => Seq[Int]) = Monomial(f(exponents))
   override def toString = exponents.mkString("⋅")
 }
@@ -27,5 +28,6 @@ object Monomial {
       }
     }
   }
+  def basis(i: Int, n: Int) = Monomial(for {j <- 0 until n} yield if (i == j) 1 else 0)
 }
 

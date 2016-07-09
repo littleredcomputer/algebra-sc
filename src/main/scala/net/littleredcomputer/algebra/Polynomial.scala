@@ -18,9 +18,13 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   lazy val arity: Int = computeArity
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
+  private def k(r: R) = Term(r, Monomial(Seq.fill(arity)(0)))
   def +(y: Polynomial[R]) = Polynomial.make(terms ++ y.terms)
+  def +(y: Term[R]) = Polynomial.make(y :: terms)
+  def +(y: R) = Polynomial.make(k(y) :: terms)
+  def -(y: R) = this + R.unary_-(y)
   def *(y: Polynomial[R]) = Polynomial.make(for { x <- terms; y <- y.terms } yield x * y)
-  def *(y: R) = map(c => R.*(y, c))
+  def *(y: R) = map(c => R.*(c, y))
   def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
   def -(y: Polynomial[R]) = this + (-y)
@@ -60,7 +64,7 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   }
   def lower(implicit Rx: Ring[Polynomial[R]]) = {
     Polynomial.make((for ((x, qs) <- terms groupBy (_.monomial.exponents.head))
-      yield Term(Polynomial.make(qs map {_.mapm (_.tail)}), Monomial(List(x)))
+      yield Term(Polynomial.make(qs map {_.mapx (_.tail)}), Monomial(List(x)))
     ).toList)
   }
   // Are we in trouble? How do we type evaluate so that
@@ -74,7 +78,7 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   def evaluate(x: R): R = {
     require(arity == 1)
     (R.zero /: terms) {
-      case (sum, Term(c, m)) => R.+(sum, R.*(c, R.expt(x, m.exponents.head)))
+      case (sum, Term(c, m)) => R.+(sum, R.*(c, R.^(x, m.exponents.head)))
     }
   }
   //  def evaluate(xs: Array[R]): R = {
@@ -181,7 +185,4 @@ object MyApp extends App {
   val pxy = Polynomial[BigFraction](List(qxy))
   println("pxy", pxy)
   println("pxy2-pxy", pxy*pxy - pxy)
-
-
-
 }
