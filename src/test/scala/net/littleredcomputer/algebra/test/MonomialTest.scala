@@ -32,6 +32,15 @@ class MonomialTest extends FlatSpec with Matchers {
     f(xy2z, x3) should be < 0
     f(x3, z2) should be < 0
   }
+  "Monomials" should "can be multiplied" in {
+    Monomial(List(3, 1, 2)) * Monomial(List(1, 2, 3)) should be (Monomial(List(4, 3, 5)))
+  }
+  it should "can be exponentiated" in {
+    Monomial(List(3, 1, 2)) ^ 3 should be (Monomial(List(9, 3, 6)))
+  }
+  it should "be mappable" in {
+    Monomial(List(3,1,2)) map (_.tail) should be (Monomial(List(1,2)))
+  }
 }
 
 
