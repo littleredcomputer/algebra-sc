@@ -84,6 +84,26 @@ class UnivariateSuite extends FlatSpec with Matchers {
   }
 }
 
+class RemainderTest extends FlatSpec with Matchers {
+  val u = Polynomial.makeDenseUnivariate(List(-5, 2, 8, -3, -3, 0, 1, 0, 1))
+  val v = Polynomial.makeDenseUnivariate(List(21, -9, -4, 0, 5, 0, 3))
+  val z = Polynomial.makeDenseUnivariate[Int](List())
+  "Knuth's Example" should "work over Z" in {
+    u divide v should be (z, u)
+  }
+  val uq = Polynomial.makeDenseUnivariate(List(-5, 2, 8, -3, -3, 0, 1, 0, 1) map (new BigFraction(_)))
+  val vq = Polynomial.makeDenseUnivariate(List(21, -9, -4, 0, 5, 0, 3) map (new BigFraction(_)))
+  val zq = Polynomial.makeDenseUnivariate[BigFraction](List())
+  it should "work over Q" in {
+    uq divide vq should be (
+      Polynomial.makeDenseUnivariate(List(new BigFraction(-2, 9), BigFraction.ZERO, new BigFraction(1, 3))),
+      Polynomial.makeDenseUnivariate(List(new BigFraction(-1, 3), BigFraction.ZERO, new BigFraction(1, 9), BigFraction.ZERO, new BigFraction(-5, 9)))
+    )
+  }
+  // where we left off: Z division fails, Q division works, but we want working pseudo-division over Z
+  // which brings up an interesting point: does pseudo-division have to happen over an integral domain?
+}
+
 class PolynomialSuite extends FlatSpec with Matchers {
   val one = Polynomial(List(Term(1, Monomial(List(0,0)))))
   val x = Polynomial(List(Term(1, Monomial(List(1,0)))))
@@ -99,7 +119,7 @@ class PolynomialSuite extends FlatSpec with Matchers {
     val f = x*x*y + x*y*y + y*y
     val f1 = x*y - one
     val f2 = y*y - one
-    f divide List(f1, f2) should  be (List(x + y, one), x + y + one)
+    f divide List(f1, f2) should be (List(x + y, one), x + y + one)
   }
   it should "pass Ex.4 (p.66)" in {
     val f = x*x*y + x*y*y + y*y

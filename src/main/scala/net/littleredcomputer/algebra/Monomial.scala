@@ -1,7 +1,5 @@
 package net.littleredcomputer.algebra
 
-import scala.collection.mutable
-
 /**
   * Created by colin on 7/6/16.
   */

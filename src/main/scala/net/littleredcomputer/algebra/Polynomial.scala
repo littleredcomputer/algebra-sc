@@ -19,10 +19,7 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
   def +(y: Polynomial[R]) = Polynomial.make(terms ++ y.terms)
-  def *(y: Polynomial[R]) = Polynomial.make(for {
-    x <- terms
-    y <- y.terms
-  } yield x * y)
+  def *(y: Polynomial[R]) = Polynomial.make(for { x <- terms; y <- y.terms } yield x * y)
   def *(y: R) = map(c => R.*(y, c))
   def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
@@ -56,6 +53,11 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
     }
     step(this, List(), List())
   }
+  def pseudoRemainder(y: Polynomial[R]): Unit = {
+    require(!y.isZero)
+    require(arity == 1)
+    require(y.arity == 1)
+  }
   def lower(implicit Rx: Ring[Polynomial[R]]) = {
     Polynomial.make((for ((x, qs) <- terms groupBy (_.monomial.exponents.head))
       yield Term(Polynomial.make(qs map {_.mapm (_.tail)}), Monomial(List(x)))
@@ -85,13 +87,16 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
 }
 
 object Polynomial {
-  def make[T](ms: Seq[Term[T]]) (implicit R: Ring[T]) = {
+  def make[R](ms: Seq[Term[R]]) (implicit R: Ring[R]) = {
     val terms = for {
       (xs, cs) <- ms groupBy (_.monomial.exponents)
       c = (R.zero /: cs)((sum, c) => R.+(sum, c.coefficient))
       if c != R.zero
     } yield Term(c, Monomial(xs))
     Polynomial(terms.toList.sortBy(_.monomial)(Monomial.Ordering.GrLex))
+  }
+  def makeDenseUnivariate[R](cs: Seq[R]) (implicit R: Ring[R]): Polynomial[R] = {
+    Polynomial.make[R](cs.zipWithIndex map {case (c, i) => Term[R](c, Monomial(List(i)))})
   }
   // experiment with variance: why can't a Polynomial[Nothing] serve as a zero element?
   def zero[T]() (implicit R: Ring[T]) = make[T](List())
