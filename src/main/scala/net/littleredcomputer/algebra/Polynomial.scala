@@ -22,6 +22,7 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   def +(y: Polynomial[R]) = Polynomial.make(terms ++ y.terms)
   def +(y: Term[R]) = Polynomial.make(y :: terms)
   def +(y: R) = Polynomial.make(k(y) :: terms)
+  def -(y: Term[R]) = Polynomial.make(-y :: terms)
   def -(y: R) = this + R.unary_-(y)
   def *(y: Polynomial[R]) = Polynomial.make(for { x <- terms; y <- y.terms } yield x * y)
   def *(y: R) = map(c => R.*(c, y))
@@ -57,11 +58,11 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
     }
     step(this, List(), List())
   }
-  def pseudoRemainder(y: Polynomial[R]): Unit = {
-    require(!y.isZero)
-    require(arity == 1)
-    require(y.arity == 1)
-  }
+//  def pseudoRemainder(y: Polynomial[R]): Unit = {
+//    require(!y.isZero)
+//    require(arity == 1)
+//    require(y.arity == 1)
+//  }
   def lower(implicit Rx: Ring[Polynomial[R]]) = {
     Polynomial.make((for ((x, qs) <- terms groupBy (_.monomial.exponents.head))
       yield Term(Polynomial.make(qs map {_.mapx (_.tail)}), Monomial(List(x)))

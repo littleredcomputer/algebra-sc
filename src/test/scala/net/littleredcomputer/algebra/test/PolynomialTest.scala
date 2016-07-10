@@ -48,12 +48,15 @@ class UnivariateSuite extends FlatSpec with Matchers {
   val x = Monomial(List(1))
   val one = Term(1, Monomial(List(0)))
   val z = Polynomial.zero[Int]
+  val x2m1 = Polynomial.make(List(Term(1, x*x), -one))
+  val xp1 = Polynomial.make(List(Term(1, x), one))
+  val xm1 = Polynomial.make(List(Term(1, x), -one))
   "Simple divisions" should "work" in {
-    val x2m1 = Polynomial.make(List(Term(1, x*x), -one))
-    val xp1 = Polynomial.make(List(Term(1, x), one))
-    val xm1 = Polynomial.make(List(Term(1, x), -one))
     x2m1 divide xp1 should be (xm1, z)
     x2m1 divide xm1 should be (xp1, z)
+  }
+  "Evaluation" should "work" in {
+    (xp1 * xm1).evaluate(5) should be (24)
   }
 }
 
@@ -80,28 +83,38 @@ class RemainderTest extends FlatSpec with Matchers {
   // which brings up an interesting point: does pseudo-division have to happen over an integral domain?
 }
 
-class VariablesTest extends FlatSpec with Matchers {
-  Term.variables[Int](3) match {
+abstract class VariablesTest[R] (implicit R: Ring[R]) extends FlatSpec with Matchers {
+  Term.variables[R](3) match {
     case Seq(x, y, z) =>
       "variables" should "produce usable terms" in {
-        x should be (Term(1, Monomial(List(1, 0, 0))))
-        y should be (Term(1, Monomial(List(0, 1, 0))))
-        x*y should be (Term(1, Monomial(List(1, 1, 0))))
+        x should be (Term[R](R.one, Monomial(List(1, 0, 0))))
+        y should be (Term[R](R.one, Monomial(List(0, 1, 0))))
+        x*y should be (Term[R](R.one, Monomial(List(1, 1, 0))))
       }
       it should "produce polynomials when added" in {
-        x+y should be (Polynomial.make[Int](List(x, y)))
-      }
-      it should "accept addition by a constant" in {
-        y+5 should be (Polynomial.make[Int](List(y, Term(5, Monomial(List(0,0,0))))))
-        y+(z+5) should be (Polynomial.make[Int](z :: (y+5).terms))
-        (y+z)+5 should be (Polynomial.make[Int](z :: (y+5).terms))
-        y+z+5 should be (Polynomial.make[Int](z :: (y+5).terms))
+        x+y should be (Polynomial.make[R](List(x, y)))
       }
       it should "terms can exponentiate" in {
-        z^5 should be(Term(1, Monomial(List(0, 0, 5))))
+        z^5 should be(Term[R](R.one, Monomial(List(0, 0, 5))))
       }
   }
 }
+
+class ZVariablesTest extends VariablesTest[Int] {
+  Term.variables[Int](3) match {
+    case Seq(x, y, z) =>
+      it should "accept addition by a constant" in {
+        y+5 should be (Polynomial.make(List(y, Term(5, Monomial(List(0,0,0))))))
+        y+(z+5) should be (Polynomial.make(z :: (y+5).terms))
+        (y+z)+5 should be (Polynomial.make(z :: (y+5).terms))
+        y+z+5 should be (Polynomial.make(z :: (y+5).terms))
+      }
+  }
+}
+
+class QVariablesTest extends VariablesTest[BigFraction] {}
+class RVariablesTest extends VariablesTest[Double] {}
+class BVariablesTest extends VariablesTest[BigInt] {}
 
 class PolynomialSuite extends FlatSpec with Matchers {
   val one = Polynomial.make(List(Term(1, Monomial(List(0, 0)))))
@@ -135,6 +148,13 @@ class PolynomialSuite extends FlatSpec with Matchers {
         val zero = Polynomial.zero[Int]
         f divide List(f1, f2) should be (List(Polynomial(List(y)), zero), - x - y)
         f divide List(f2, f1) should be (List(Polynomial(List(x)), zero), zero)
+      }
+      "Lowering arity" should "work" in {
+        val p = y*(x^2) + (x^2) + x*y - x + y
+        val q = p.lower
+        val w = Term[Int](1, Monomial(List(1)))
+        val o = Term[Int](1, Monomial(List(0)))
+        q should be (Polynomial(List(Term(w + o, Monomial(List(2))), Term(w - o, Monomial(List(1))), Term(Polynomial(List(w)), Monomial(List(0))))))
       }
   }
 }

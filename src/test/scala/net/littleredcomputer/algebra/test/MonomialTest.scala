@@ -19,6 +19,7 @@ class MonomialTest extends FlatSpec with Matchers {
   val x2z = Monomial(List(2, 0, 1))
   val x2 = Monomial(List(2, 0, 0))
   val xy2z = Monomial(List(1, 2, 1))
+  val y = Monomial(List(0, 1, 0))
 
   "Lex order" should "work" in {
     val f = Monomial.Ordering.Lex.compare _
@@ -33,7 +34,13 @@ class MonomialTest extends FlatSpec with Matchers {
     f(x3, z2) should be < 0
   }
   "Monomials" should "can be multiplied" in {
-    Monomial(List(3, 1, 2)) * Monomial(List(1, 2, 3)) should be (Monomial(List(4, 3, 5)))
+    x3 * z2 should be (x3z2)
+    z2 * x3 should be (x3z2)
+  }
+  it should "be commutative" in {
+    x2 * y * z2 should be (x2yz2)
+    y * z2 * x2 should be (x2yz2)
+    z2 * x2 * y should be (x2yz2)
   }
   it should "can be exponentiated" in {
     Monomial(List(3, 1, 2)) ^ 3 should be (Monomial(List(9, 3, 6)))

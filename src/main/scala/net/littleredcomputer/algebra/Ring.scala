@@ -38,7 +38,7 @@ object Ring {
       require(y != 0)
       if (x % y == 0) Some(x/y) else None
     }
-    def ^(x: BigInt, y: Int) = ???
+    def ^(x: BigInt, y: Int) = x.pow(y)
   }
   implicit object R extends Ring[Double] {
     def zero = 0.0
