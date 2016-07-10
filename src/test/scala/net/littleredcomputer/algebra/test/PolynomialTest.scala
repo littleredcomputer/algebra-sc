@@ -61,11 +61,12 @@ class UnivariateSuite extends FlatSpec with Matchers {
 }
 
 class RemainderTest extends FlatSpec with Matchers {
-  val u = Polynomial.makeDenseUnivariate(List(-5, 2, 8, -3, -3, 0, 1, 0, 1))
-  val v = Polynomial.makeDenseUnivariate(List(21, -9, -4, 0, 5, 0, 3))
-  val z = Polynomial.makeDenseUnivariate[Int](List())
-  val uq = Polynomial.makeDenseUnivariate(List(-5, 2, 8, -3, -3, 0, 1, 0, 1) map (new BigFraction(_)))
-  val vq = Polynomial.makeDenseUnivariate(List(21, -9, -4, 0, 5, 0, 3) map (new BigFraction(_)))
+  def P(as: Int*) = Polynomial.makeDenseUnivariate[Int](as.toList)
+  val u = P(-5, 2, 8, -3, -3, 0, 1, 0, 1)
+  val v = P(21, -9, -4, 0, 5, 0, 3)
+  val z = P()
+  val uq = P(-5, 2, 8, -3, -3, 0, 1, 0, 1) map (new BigFraction(_))
+  val vq = P(21, -9, -4, 0, 5, 0, 3) map (new BigFraction(_))
   val zq = Polynomial.makeDenseUnivariate[BigFraction](List())
   "Z[x]" should "be liftable to Q[x] via map" in {
     u map {new BigFraction(_)} should be (uq)
@@ -75,9 +76,18 @@ class RemainderTest extends FlatSpec with Matchers {
   }
   it should "work over Q" in {
     uq divide vq should be (
-      Polynomial.makeDenseUnivariate(List(new BigFraction(-2, 9), BigFraction.ZERO, new BigFraction(1, 3))),
-      Polynomial.makeDenseUnivariate(List(new BigFraction(-1, 3), BigFraction.ZERO, new BigFraction(1, 9), BigFraction.ZERO, new BigFraction(-5, 9)))
+      Polynomial.makeDenseUnivariate[BigFraction](List(new BigFraction(-2, 9), BigFraction.ZERO, new BigFraction(1, 3))),
+      Polynomial.makeDenseUnivariate[BigFraction](List(new BigFraction(-1, 3), BigFraction.ZERO, new BigFraction(1, 9), BigFraction.ZERO, new BigFraction(-5, 9)))
     )
+  }
+  it should "pseudo-divide over Z" in {
+    u pseudoRemainder v should be (P(-3, 0, 1, 0, -5), 2)
+  }
+  "other pseudo-remainder examples" should "work" in {
+    P(1, 1, 0, 1) pseudoRemainder P(1, 1, 3) should be (P(10, 7), 2)
+    P(3, 0, 4) pseudoRemainder P(2, 2) should be (P(28), 2)
+    P(7) pseudoRemainder P(2) should be (P(0), 1)
+
   }
   // where we left off: Z division fails, Q division works, but we want working pseudo-division over Z
   // which brings up an interesting point: does pseudo-division have to happen over an integral domain?

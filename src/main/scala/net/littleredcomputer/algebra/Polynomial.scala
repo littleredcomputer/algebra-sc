@@ -13,9 +13,10 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   private def computeArity = {
     val arities = (terms map (_.monomial.arity)).distinct
     require(arities.length <= 1, "All monomials of a polynomial must have the same arity")
-    arities.headOption.getOrElse(0)
+    if (arities.isEmpty) 0 else arities.head
   }
   lazy val arity: Int = computeArity
+  lazy val degree: Int = if (terms.isEmpty) -1 else (terms map (_.monomial.degree)).max
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
   private def k(r: R) = Term(r, Monomial(Seq.fill(arity)(0)))
@@ -25,6 +26,7 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   def -(y: Term[R]) = Polynomial.make(-y :: terms)
   def -(y: R) = this + R.unary_-(y)
   def *(y: Polynomial[R]) = Polynomial.make(for { x <- terms; y <- y.terms } yield x * y)
+  def *(y: Term[R]) = Polynomial.make(for { t <- terms } yield t * y)
   def *(y: R) = map(c => R.*(c, y))
   def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
@@ -58,11 +60,18 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
     }
     step(this, List(), List())
   }
-//  def pseudoRemainder(y: Polynomial[R]): Unit = {
-//    require(!y.isZero)
-//    require(arity == 1)
-//    require(y.arity == 1)
-//  }
+  def pseudoRemainder(y: Polynomial[R]): (Polynomial[R], Int) = {
+    require(!y.isZero)
+    require(arity == 1 && y.arity == 1)
+    val vn = y.leadingTerm
+    val n = vn.monomial.degree
+    @tailrec def step(remainder: Polynomial[R], d: Int): (Polynomial[R], Int) = {
+      val m = remainder.degree
+      if (m < n) (remainder, d)
+      else step (remainder * vn.coefficient - (y * Term(remainder.leadingTerm.coefficient, Monomial(List(m-n)))), d+1)
+    }
+    step(this, 0)
+  }
   def lower(implicit Rx: Ring[Polynomial[R]]) = {
     Polynomial.make((for ((x, qs) <- terms groupBy (_.monomial.exponents.head))
       yield Term(Polynomial.make(qs map {_.mapx (_.tail)}), Monomial(List(x)))
@@ -82,13 +91,6 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
       case (sum, Term(c, m)) => R.+(sum, R.*(c, R.^(x, m.exponents.head)))
     }
   }
-  //  def evaluate(xs: Array[R]): R = {
-  //    require(arity == xs.length)
-  //    (R.zero /: ts) {
-  //      case (sum, Term(c, m)) =>
-  //        (R.one /: m.exponents)
-  //    }
-  //  }
 }
 
 object Polynomial {
