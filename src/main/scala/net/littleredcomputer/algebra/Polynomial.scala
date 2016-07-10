@@ -4,8 +4,6 @@
 
 package net.littleredcomputer.algebra
 
-import org.apache.commons.math3.fraction.BigFraction
-
 import scala.annotation.tailrec
 
 case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
