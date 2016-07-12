@@ -37,7 +37,7 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
     @tailrec def step(p: Polynomial[R], qs: List[List[Term[R]]], remainder: List[Term[R]]): (List[Polynomial[R]], Polynomial[R]) = {
       @tailrec def findDivisor(ysi: Seq[(Polynomial[R], Int)]): Option[(Term[R], Int)] = ysi match {
         case (d, i) :: ds => p.leadingTerm /? d.leadingTerm match {
-          case Some(divisor) => Some((divisor, i))
+          case Some(divisor) => Some(divisor, i)
           case None => findDivisor(ds)
         }
         case Nil => None
@@ -109,4 +109,3 @@ object Polynomial {
   // experiment with variance: why can't a Polynomial[Nothing] serve as a zero element?
   def zero[T]() (implicit R: Ring[T]) = make[T](List())
 }
-

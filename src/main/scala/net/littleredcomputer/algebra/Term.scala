@@ -23,11 +23,9 @@ case class Term[R] (coefficient: R, monomial: Monomial) (implicit R: Ring[R]) {
     * @return the new term
     */
   def mapx(f: Seq[Int] => Seq[Int]) = Term(coefficient, monomial map f)
-  def *(y: Term[R]) = {
-    require(monomial.arity == y.monomial.arity)
-    Term(R.*(coefficient, y.coefficient), monomial * y.monomial)
-  }
-  def *(y: R) = Term(R.*(y, coefficient), monomial)
+  def *(y: Term[R]) = Term(R.*(coefficient, y.coefficient), monomial * y.monomial)
+  def *(y: Polynomial[R]): Polynomial[R] = Polynomial.make(for (t <- y.terms) yield this * t)
+  def *(y: R) = Term(R.*(coefficient, y), monomial)
   def ^(y: Int) = Term(R.^(coefficient, y), monomial ^ y)
   def +(y: Term[R]) = Polynomial.make[R](List(this, y))
   def +(y: R) = Polynomial.make(List(Term(y, Monomial(List.fill(monomial.arity)(0))), this))
