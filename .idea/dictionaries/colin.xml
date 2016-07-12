@@ -2,6 +2,8 @@
   <dictionary name="colin">
     <words>
       <w>arities</w>
+      <w>scalacheck</w>
+      <w>scalatest</w>
       <w>univariate</w>
     </words>
   </dictionary>

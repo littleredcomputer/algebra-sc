@@ -68,7 +68,7 @@ class RemainderTest extends FlatSpec with Matchers {
   val uq = P(-5, 2, 8, -3, -3, 0, 1, 0, 1) map (new BigFraction(_))
   val vq = P(21, -9, -4, 0, 5, 0, 3) map (new BigFraction(_))
   val zq = Polynomial.makeDenseUnivariate[BigFraction](List())
-  "Z[x]" should "be liftable to Q[x] via map" in {
+  "Z[x]" should "lift to Q[x] via map" in {
     u map {new BigFraction(_)} should be (uq)
   }
   "Knuth's Example" should "work over Z" in {
