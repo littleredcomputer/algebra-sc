@@ -21,6 +21,7 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   def +(y: Polynomial[R]) = Polynomial.make(terms ++ y.terms)
   def +(y: Term[R]) = Polynomial.make(y :: terms)
   def +(y: R) = Polynomial.make(k(y) :: terms)
+  def -(y: Polynomial[R]) = this + -y
   def -(y: Term[R]) = Polynomial.make(-y :: terms)
   def -(y: R) = this + R.unary_-(y)
   def *(y: Polynomial[R]) = Polynomial.make(for { x <- terms; y <- y.terms } yield x * y)
@@ -28,7 +29,6 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   def *(y: R) = map(c => R.*(c, y))
   def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
-  def -(y: Polynomial[R]) = this + (-y)
   def isZero = terms.isEmpty
   def leadingTerm = terms.head
   def divide(ys: Seq[Polynomial[R]]) = {
@@ -49,7 +49,7 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
     }
     step(this, List.fill(ys.length)(List()), List())
   }
-  def divide(y: Polynomial[R]) = {
+  def divide(y: Polynomial[R]): (Polynomial[R], Polynomial[R]) = {
     // The CLO algorithm above, simplified for a single divisor.
     @tailrec def step(p: Polynomial[R], quotient: List[Term[R]], remainder: List[Term[R]]): (Polynomial[R], Polynomial[R]) = {
       if (p.isZero) (Polynomial.make(quotient), Polynomial.make(remainder)) else {
@@ -61,6 +61,7 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
     }
     step(this, List(), List())
   }
+  def divide(y: Term[R]): (Polynomial[R], Polynomial[R]) = divide(Polynomial(List(y)))
   def pseudoRemainder(y: Polynomial[R]): (Polynomial[R], Int) = {
     require(!y.isZero)
     require(arity == 1 && y.arity == 1)
@@ -72,6 +73,13 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
       else step (remainder * vn.coefficient - (y * Term(remainder.leadingTerm.coefficient, Monomial(List(m-n)))), d+1)
     }
     step(this, 0)
+  }
+  // We have tolerated a shady approach to division, but now we should consider
+  // whether we want to introduce subclassing based upon whether the base rings
+  // are Euclidean. If we don't do it now, the code risks becoming less principled.
+  def S(y: Polynomial[R]) = {
+    val xGamma = Term(R.one, leadingTerm.monomial lcm y.leadingTerm.monomial)
+    ((xGamma * this) divide this.leadingTerm)._1 - ((xGamma * y) divide y.leadingTerm)._1
   }
   def lower(implicit Rx: Ring[Polynomial[R]]) = {
     Polynomial.make((for ((x, qs) <- terms groupBy (_.monomial.exponents.head))

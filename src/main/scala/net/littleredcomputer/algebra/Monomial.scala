@@ -1,5 +1,6 @@
 package net.littleredcomputer.algebra
 
+import Function.tupled
 /**
   * Created by colin on 7/6/16.
   */
@@ -9,7 +10,11 @@ case class Monomial private (exponents: Seq[Int]) {
   val degree = exponents.sum
   def *(y: Monomial) = {
     require(arity == y.arity)
-    Monomial((exponents, y.exponents).zipped map (_+_))
+    Monomial((exponents, y.exponents).zipped map (_ + _))
+  }
+  def lcm(y: Monomial) = {
+    require(arity == y.arity)
+    Monomial((exponents, y.exponents).zipped map (_ max _))
   }
   def ^(y: Int) = Monomial(exponents map (_ * y))
   def map(f: Seq[Int] => Seq[Int]) = Monomial(f(exponents))

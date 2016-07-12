@@ -169,6 +169,17 @@ class PolynomialSuite extends FlatSpec with Matchers {
   }
 }
 
+class SPolynomialTest extends FlatSpec with Matchers {
+  Term.variables[BigFraction](2) match {
+    case Seq(x, y) =>
+      val f = (x ^ 3) * (y ^ 2) - (x ^ 2) * (y ^ 3) + x
+      val g = (x ^ 4) * y * new BigFraction(3) + (y ^ 2)
+      "S polynomials" should "check over Q" in {
+        f S g should be(- (x^3) * (y^3) + (x^2) - (y^3) * BigFraction.ONE_THIRD)
+      }
+  }
+}
+
 // Tricky to figure out how to supply the necessary implicits to this style of test!
 //class PTestZ2 extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
 //  implicit val arity = 2
