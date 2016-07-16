@@ -6,7 +6,7 @@ package net.littleredcomputer.algebra
 
 import scala.annotation.tailrec
 
-case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
+class Polynomial[R] private (val terms: List[Term[R]]) (implicit R: Ring[R]) {
   // the monomials of a polynomial must all have the same arity.
   private def computeArity = {
     val arities = (terms map (_.monomial.arity)).distinct
@@ -15,9 +15,26 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   }
   lazy val arity: Int = computeArity
   lazy val degree: Int = if (terms.isEmpty) -1 else (terms map (_.monomial.degree)).max
+
+  // Since we are experimenting with not being case class...
+  // (because pattern matching on Polynomial objects is probably
+  // never useful and we may need to implement subclasses of polynomial
+  // on different types of ring), we need Odersky-approved equality
+  // and hashCode methods. The good news is our constituents are case classes and so
+  // their equality is well-defined.
+  def canEqual(other: Any): Boolean = other.isInstanceOf[Polynomial[R]]
+  override def equals(other: Any): Boolean = other match {
+    case that: Polynomial[R] => (that canEqual this) && (terms == that.terms)
+    case _ => false
+  }
+  override def hashCode: Int = terms.##
+
+  // Possibly suspicious lift from term to polynomial
+  implicit def termToPolynomial(t: Term[R]): Polynomial[R] = new Polynomial[R](List(t))
+
+  private def k(r: R) = Term(r, Monomial(Seq.fill(arity)(0)))
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
-  private def k(r: R) = Term(r, Monomial(Seq.fill(arity)(0)))
   def +(y: Polynomial[R]) = Polynomial.make(terms ++ y.terms)
   def +(y: Term[R]) = Polynomial.make(y :: terms)
   def +(y: R) = Polynomial.make(k(y) :: terms)
@@ -54,14 +71,14 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
     @tailrec def step(p: Polynomial[R], quotient: List[Term[R]], remainder: List[Term[R]]): (Polynomial[R], Polynomial[R]) = {
       if (p.isZero) (Polynomial.make(quotient), Polynomial.make(remainder)) else {
         p.leadingTerm /? y.leadingTerm match {
-          case Some(q) => step(p - Polynomial(List(q)) * y, q :: quotient, remainder)
-          case None => step(p - Polynomial(List(p.leadingTerm)), quotient, p.leadingTerm :: remainder)
+          case Some(q) => step(p - q * y, q :: quotient, remainder)
+          case None => step(p - p.leadingTerm, quotient, p.leadingTerm :: remainder)
         }
       }
     }
     step(this, List(), List())
   }
-  def divide(y: Term[R]): (Polynomial[R], Polynomial[R]) = divide(Polynomial(List(y)))
+  def divide(y: Term[R]): (Polynomial[R], Polynomial[R]) = divide(new Polynomial(List(y)))
   def pseudoRemainder(y: Polynomial[R]): (Polynomial[R], Int) = {
     require(!y.isZero)
     require(arity == 1 && y.arity == 1)
@@ -103,14 +120,15 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
 }
 
 object Polynomial {
-  def make[R](ms: Seq[Term[R]]) (implicit R: Ring[R]) = {
+  def make[R](ts: Seq[Term[R]])(implicit R: Ring[R]) = {
     val terms = for {
-      (xs, cs) <- ms groupBy (_.monomial.exponents)
+      (xs, cs) <- ts groupBy (_.monomial.exponents)
       c = (R.zero /: cs)((sum, c) => R.+(sum, c.coefficient))
       if c != R.zero
     } yield Term(c, Monomial(xs))
-    Polynomial(terms.toList.sortBy(_.monomial)(Monomial.Ordering.GrLex))
+    new Polynomial(terms.toList.sortBy(_.monomial)(Monomial.Ordering.GrLex))
   }
+  def make[R](t: Term[R]) (implicit R: Ring[R]) = new Polynomial(List(t))
   def makeDenseUnivariate[R](cs: Seq[R]) (implicit R: Ring[R]): Polynomial[R] = {
     Polynomial.make[R](cs.zipWithIndex map {case (c, i) => Term[R](c, Monomial(List(i)))})
   }

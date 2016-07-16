@@ -38,7 +38,7 @@ class MonomialSuite extends FlatSpec with Matchers {
   val z = Polynomial.zero[Int]
 
   "The zero polynomial" should "annihilate any other" in {
-    val p = Polynomial(List(Term(1, x)))
+    val p = Polynomial.make(Term(1, x))
     p * z should be (z)
     z * p should be (z)
   }
@@ -137,7 +137,7 @@ class PolynomialSuite extends FlatSpec with Matchers {
         val f = x*y*y + 1
         val f1 = x*y + 1
         val f2 = y + 1
-        f divide List(f1, f2) should be (List(Polynomial(List(y)), -one), one * 2)
+        f divide List(f1, f2) should be (List(Polynomial.make(y), -one), one * 2)
       }
       it should "pass Ex.2 (p.62)" in {
         val f = x*x*y + x*y*y + y*y
@@ -149,22 +149,22 @@ class PolynomialSuite extends FlatSpec with Matchers {
         val f = x*x*y + x*y*y + y*y
         val f1 = y*y - 1
         val f2 = x*y - 1
-        f divide List(f1, f2) should be (List(x + 1, Polynomial(List(x))), x + x + 1)
+        f divide List(f1, f2) should be (List(x + 1, Polynomial.make(x)), x + x + 1)
       }
       it should "pass Ex.5 (p.67)" in {
         val f = x*y*y - x
         val f1 = x*y + 1
         val f2 = y*y - 1
         val zero = Polynomial.zero[Int]
-        f divide List(f1, f2) should be (List(Polynomial(List(y)), zero), - x - y)
-        f divide List(f2, f1) should be (List(Polynomial(List(x)), zero), zero)
+        f divide List(f1, f2) should be (List(Polynomial.make(y), zero), - x - y)
+        f divide List(f2, f1) should be (List(Polynomial.make(x), zero), zero)
       }
       "Lowering arity" should "work" in {
         val p = y*(x^2) + (x^2) + x*y - x + y
         val q = p.lower
         val w = Term[Int](1, Monomial(List(1)))
         val o = Term[Int](1, Monomial(List(0)))
-        q should be (Polynomial(List(Term(w + o, Monomial(List(2))), Term(w - o, Monomial(List(1))), Term(Polynomial(List(w)), Monomial(List(0))))))
+        q should be (Polynomial.make(List(Term(w + o, Monomial(List(2))), Term(w - o, Monomial(List(1))), Term(Polynomial.make(w), Monomial(List(0))))))
       }
   }
 }
