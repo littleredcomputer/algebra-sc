@@ -33,18 +33,21 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   def leadingTerm = terms.head
   def divide(ys: Seq[Polynomial[R]]) = {
     // Cox, Little & O'Shea "Ideals, Varieties and Algorithms 2.3 Theorem 3
+    val ysi = ys.zipWithIndex
     @tailrec def step(p: Polynomial[R], qs: List[List[Term[R]]], remainder: List[Term[R]]): (List[Polynomial[R]], Polynomial[R]) = {
-      if (p.isZero) (qs map Polynomial.make[R], Polynomial.make(remainder)) else {
-        val i = ys.indexWhere(y => (p.leadingTerm /? y.leadingTerm).isDefined)
-        if (i < 0) step(p - Polynomial(List(p.leadingTerm)), qs, p.leadingTerm :: remainder)
-        else {
-          val y = ys(i)
-          val q = (p.leadingTerm /? y.leadingTerm).get
-          step(p - Polynomial(List(q)) * y, qs.updated(i, q :: qs(i)), remainder)
+      @tailrec def findDivisor(ysi: Seq[(Polynomial[R], Int)]): Option[(Term[R], Int)] = ysi match {
+        case (d, i) :: ds => p.leadingTerm /? d.leadingTerm match {
+          case Some(divisor) => Some(divisor, i)
+          case None => findDivisor(ds)
         }
+        case Nil => None
+      }
+      if (p.isZero) (qs map Polynomial.make[R], Polynomial.make(remainder)) else findDivisor(ysi) match {
+        case Some((d, i)) => step(p - ys(i) * d, qs.updated(i, d :: qs(i)), remainder)
+        case None => step(p - p.leadingTerm, qs, p.leadingTerm :: remainder)
       }
     }
-    step(this, (ys map (_ => List())).toList, List())
+    step(this, List.fill(ys.length)(List()), List())
   }
   def divide(y: Polynomial[R]) = {
     // The CLO algorithm above, simplified for a single divisor.
@@ -106,4 +109,3 @@ object Polynomial {
   // experiment with variance: why can't a Polynomial[Nothing] serve as a zero element?
   def zero[T]() (implicit R: Ring[T]) = make[T](List())
 }
-
