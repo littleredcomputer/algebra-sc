@@ -23,7 +23,7 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   def +(y: R) = Polynomial.make(k(y) :: terms)
   def -(y: Term[R]) = Polynomial.make(-y :: terms)
   def -(y: R) = this + R.unary_-(y)
-  def *(y: Polynomial[R]) = Polynomial.make(for { x <- terms; y <- y.terms } yield x * y)
+  def *(y: Polynomial[R]) = Polynomial.make(for { t <- terms; y <- y.terms } yield t * y)
   def *(y: Term[R]) = Polynomial.make(for { t <- terms } yield t * y)
   def *(y: R) = map(c => R.*(c, y))
   def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))

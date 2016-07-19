@@ -87,10 +87,7 @@ class RemainderTest extends FlatSpec with Matchers {
     P(1, 1, 0, 1) pseudoRemainder P(1, 1, 3) should be (P(10, 7), 2)
     P(3, 0, 4) pseudoRemainder P(2, 2) should be (P(28), 2)
     P(7) pseudoRemainder P(2) should be (P(0), 1)
-
   }
-  // where we left off: Z division fails, Q division works, but we want working pseudo-division over Z
-  // which brings up an interesting point: does pseudo-division have to happen over an integral domain?
 }
 
 abstract class VariablesTest[R] (implicit R: Ring[R]) extends FlatSpec with Matchers {

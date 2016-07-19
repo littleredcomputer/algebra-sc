@@ -15,9 +15,9 @@ trait Ring[T] {
   def unary_-(x: T): T
   def /?(x: T, y: T): Option[T]
   def ^(x: T, e: Int): T = {
-    @tailrec def step(x: T, b: Int, r: T): T = if (b == 0) r
-      else if (b % 2 == 0) step(*(x, x), b / 2, r)
-      else step(x, b - 1, *(x, r))
+    @tailrec def step(x: T, e: Int, r: T): T = if (e == 0) r
+      else if (e % 2 == 0) step(*(x, x), e / 2, r)
+      else step(x, e - 1, *(x, r))
     step(x, e, one)
   }
 }
