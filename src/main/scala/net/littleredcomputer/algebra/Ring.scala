@@ -22,6 +22,10 @@ trait Ring[T] {
   }
 }
 
+trait EuclideanRing[R] extends Ring[R] {
+  def booya = 999
+}
+
 object Ring {
   implicit object Z extends Ring[Int] {
     override def zero = 0

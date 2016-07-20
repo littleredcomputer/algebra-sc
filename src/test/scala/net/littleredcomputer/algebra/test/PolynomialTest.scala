@@ -46,6 +46,8 @@ class UnivariateSuite extends FlatSpec with Matchers {
 }
 
 class RemainderTest extends FlatSpec with Matchers {
+  import scala.language.implicitConversions
+  implicit def toRational(x: Int): BigFraction = new BigFraction(x)
   def P(as: Int*) = Polynomial.makeDenseUnivariate[Int](as.toList)
   val u = P(-5, 2, 8, -3, -3, 0, 1, 0, 1)
   val v = P(21, -9, -4, 0, 5, 0, 3)
@@ -53,6 +55,7 @@ class RemainderTest extends FlatSpec with Matchers {
   val uq = P(-5, 2, 8, -3, -3, 0, 1, 0, 1) map (new BigFraction(_))
   val vq = P(21, -9, -4, 0, 5, 0, 3) map (new BigFraction(_))
   val zq = Polynomial.makeDenseUnivariate[BigFraction](List())
+
   "Z[x]" should "be liftable to Q[x] via map" in {
     u map {new BigFraction(_)} should be (uq)
   }
@@ -61,8 +64,8 @@ class RemainderTest extends FlatSpec with Matchers {
   }
   it should "work over Q" in {
     uq divide vq should be (
-      Polynomial.makeDenseUnivariate[BigFraction](List(new BigFraction(-2, 9), BigFraction.ZERO, new BigFraction(1, 3))),
-      Polynomial.makeDenseUnivariate[BigFraction](List(new BigFraction(-1, 3), BigFraction.ZERO, new BigFraction(1, 9), BigFraction.ZERO, new BigFraction(-5, 9)))
+      Polynomial.makeDenseUnivariate[BigFraction](List(-2 divide 9, 0, 1 divide 3)),
+      Polynomial.makeDenseUnivariate[BigFraction](List(-1 divide 3, 0, 1 divide 9, 0, -5 divide 9))
     )
   }
   it should "pseudo-divide over Z" in {
@@ -155,7 +158,7 @@ object PTestZ extends Properties("Polynomial[Int]") {
     property("+ is commutative a=" + arity) = forAll {
       (p: Zx, q: Zx) => p + q == q + p
     }
-    property("* is comm. a=" + arity) = forAll {
+    property("* is commutative a=" + arity) = forAll {
       (p: Zx, q: Zx) => p * q == q * p
     }
     property("* distributes over + a=" + arity) = forAll {
@@ -173,11 +176,12 @@ object PTestZ extends Properties("Polynomial[Int]") {
 class PTestBigZ extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
   import Implicits.arbitraryPolynomial
   override implicit val generatorDrivenConfig: PropertyCheckConfig = PropertyCheckConfig(minSuccessful = 20)
+  type BZx = Polynomial[BigInt]
   for (a <- 1 to 3) {
     implicit val arity = a
     "polynomials over BigZ" should "divide correctly, arity " + arity in {
       forAll {
-        (p: Polynomial[BigInt], q: Polynomial[BigInt]) => whenever(!p.isZero && !q.isZero) {
+        (p: BZx, q: BZx) => whenever(!p.isZero && !q.isZero) {
           (p * q) divide p should be ((q, Polynomial.zero[BigInt]))
         }
       }

@@ -6,8 +6,8 @@ package net.littleredcomputer.algebra
 
 import scala.annotation.tailrec
 
-case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
-  // the monomials of a polynomial must all have the same arity.
+trait APolynomial[R] {
+  def terms: List[Term[R]]
   private def computeArity = {
     val arities = (terms map (_.monomial.arity)).distinct
     require(arities.length <= 1, "All monomials of a polynomial must have the same arity")
@@ -15,12 +15,18 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   }
   lazy val arity: Int = computeArity
   lazy val degree: Int = if (terms.isEmpty) -1 else (terms map (_.monomial.degree)).max
+  def isZero = terms.isEmpty
+  def leadingTerm = terms.head
+  protected def constant(r: R) = Term(r, Monomial.unit(arity))
+}
+
+case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Ring[R]) extends APolynomial[R] {
+  // the monomials of a polynomial must all have the same arity.
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
-  private def k(r: R) = Term(r, Monomial.unit(arity))
   def +(y: Polynomial[R]) = Polynomial.make(terms ++ y.terms)
   def +(y: Term[R]) = Polynomial.make(y :: terms)
-  def +(y: R) = Polynomial.make(k(y) :: terms)
+  def +(y: R) = Polynomial.make(constant(y) :: terms)
   def -(y: Term[R]) = Polynomial.make(Term(R.unary_-(y.coefficient), y.monomial) :: terms)
   def -(y: R) = this + R.unary_-(y)
   def *(y: Polynomial[R]) = Polynomial.make(for { t <- terms; y <- y.terms } yield Term(R.*(t.coefficient, y.coefficient), t.monomial * y.monomial))
@@ -36,8 +42,6 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
   def -(y: Polynomial[R]) = this + (-y)
-  def isZero = terms.isEmpty
-  def leadingTerm = terms.head
   def /?(p: Term[R], q: Term[R]): Option[Term[R]] = {
     val qx = (p.monomial.exponents, q.monomial.exponents).zipped map (_ - _)
     if (qx.forall(_ >= 0)) {
@@ -108,6 +112,10 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
       case (sum, Term(c, m)) => R.+(sum, R.*(c, R.^(x, m.exponents.head)))
     }
   }
+}
+
+class EuclideanPolynomial[R] (override val terms: List[Term[R]]) (implicit R: EuclideanRing[R]) extends Polynomial[R](terms) {
+  def eucplus(y: EuclideanPolynomial[R]): EuclideanPolynomial[R] = (this + y).asInstanceOf[EuclideanPolynomial[R]]
 }
 
 object Polynomial {
