@@ -32,4 +32,5 @@ object Monomial {
     }
   }
   def basis(i: Int, n: Int) = Monomial(for {j <- 0 until n} yield if (i == j) 1 else 0)
+  def unit(n: Int) = Monomial(List.fill(0)(n))
 }

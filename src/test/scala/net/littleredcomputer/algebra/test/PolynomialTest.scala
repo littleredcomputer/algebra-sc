@@ -47,10 +47,11 @@ class MonomialSuite extends FlatSpec with Matchers {
 class UnivariateSuite extends FlatSpec with Matchers {
   val x = Monomial(List(1))
   val one = Term(1, Monomial(List(0)))
+  val mone = Term(-1, Monomial(List(0)))
   val z = Polynomial.zero[Int]
-  val x2m1 = Polynomial.make(List(Term(1, x*x), -one))
+  val x2m1 = Polynomial.make(List(Term(1, x*x), mone))
   val xp1 = Polynomial.make(List(Term(1, x), one))
-  val xm1 = Polynomial.make(List(Term(1, x), -one))
+  val xm1 = Polynomial.make(List(Term(1, x), mone))
   "Simple divisions" should "work" in {
     x2m1 divide xp1 should be (xm1, z)
     x2m1 divide xm1 should be (xp1, z)
@@ -91,30 +92,30 @@ class RemainderTest extends FlatSpec with Matchers {
 }
 
 abstract class VariablesTest[R] (implicit R: Ring[R]) extends FlatSpec with Matchers {
-  Term.variables[R](3) match {
+  Polynomial.variables[R](3) match {
     case Seq(x, y, z) =>
-      "variables" should "produce usable terms" in {
-        x should be (Term[R](R.one, Monomial(List(1, 0, 0))))
-        y should be (Term[R](R.one, Monomial(List(0, 1, 0))))
-        x*y should be (Term[R](R.one, Monomial(List(1, 1, 0))))
+      "variables" should "produce usable one-term polynomials" in {
+        x should be (Polynomial.make[R](List(Term(R.one, Monomial(List(1, 0, 0))))))
+        y should be (Polynomial.make[R](List(Term(R.one, Monomial(List(0, 1, 0))))))
+        x*y should be (Polynomial.make[R](List(Term(R.one, Monomial(List(1, 1, 0))))))
       }
       it should "produce polynomials when added" in {
-        x+y should be (Polynomial.make[R](List(x, y)))
+        x+y should be (Polynomial.make[R](List(x.leadingTerm, y.leadingTerm)))
       }
       it should "terms can exponentiate" in {
-        z^5 should be(Term[R](R.one, Monomial(List(0, 0, 5))))
+        z^5 should be(Polynomial.make[R](List(Term[R](R.one, Monomial(List(0, 0, 5))))))
       }
   }
 }
 
 class ZVariablesTest extends VariablesTest[Int] {
-  Term.variables[Int](3) match {
+  Polynomial.variables[Int](3) match {
     case Seq(x, y, z) =>
       it should "accept addition by a constant" in {
-        y+5 should be (Polynomial.make(List(y, Term(5, Monomial(List(0,0,0))))))
-        y+(z+5) should be (Polynomial.make(z :: (y+5).terms))
-        (y+z)+5 should be (Polynomial.make(z :: (y+5).terms))
-        y+z+5 should be (Polynomial.make(z :: (y+5).terms))
+        y+5 should be (Polynomial.make(List(y.leadingTerm, Term(5, Monomial(List(0,0,0))))))
+        y+(z+5) should be (Polynomial.make(z.leadingTerm :: (y+5).terms))
+        (y+z)+5 should be (Polynomial.make(z.leadingTerm :: (y+5).terms))
+        y+z+5 should be (Polynomial.make(z.leadingTerm :: (y+5).terms))
       }
   }
 }
@@ -127,14 +128,14 @@ class PolynomialSuite extends FlatSpec with Matchers {
   val one = Polynomial.make(List(Term(1, Monomial(List(0, 0)))))
   println("one", one)
   println("one*2", one * 2)
-  Term.variables[Int](2) match {
+  Polynomial.variables[Int](2) match {
     case Seq(x, y) =>
       "Multiple quotient divisions" should "pass Ex.1 (p.61)" in {
         // CLO p.61
         val f = x*y*y + 1
         val f1 = x*y + 1
         val f2 = y + 1
-        f divide List(f1, f2) should be (List(Polynomial(List(y)), -one), one * 2)
+        f divide List(f1, f2) should be (List(y, -one), one * 2)
       }
       it should "pass Ex.2 (p.62)" in {
         val f = x*x*y + x*y*y + y*y
@@ -146,22 +147,22 @@ class PolynomialSuite extends FlatSpec with Matchers {
         val f = x*x*y + x*y*y + y*y
         val f1 = y*y - 1
         val f2 = x*y - 1
-        f divide List(f1, f2) should be (List(x + 1, Polynomial(List(x))), x + x + 1)
+        f divide List(f1, f2) should be (List(x + 1, x), x + x + 1)
       }
       it should "pass Ex.5 (p.67)" in {
         val f = x*y*y - x
         val f1 = x*y + 1
         val f2 = y*y - 1
         val zero = Polynomial.zero[Int]
-        f divide List(f1, f2) should be (List(Polynomial(List(y)), zero), - x - y)
-        f divide List(f2, f1) should be (List(Polynomial(List(x)), zero), zero)
+        f divide List(f1, f2) should be (List(y, zero), - x - y)
+        f divide List(f2, f1) should be (List(x, zero), zero)
       }
       "Lowering arity" should "work" in {
         val p = y*(x^2) + (x^2) + x*y - x + y
         val q = p.lower
-        val w = Term[Int](1, Monomial(List(1)))
-        val o = Term[Int](1, Monomial(List(0)))
-        q should be (Polynomial(List(Term(w + o, Monomial(List(2))), Term(w - o, Monomial(List(1))), Term(Polynomial(List(w)), Monomial(List(0))))))
+        Polynomial.variables[Int](1) match { case Seq(w) =>
+          q should be (Polynomial(List(Term(w + 1, Monomial(List(2))), Term(w - 1, Monomial(List(1))), Term(w, Monomial(List(0))))))
+        }
       }
   }
 }
