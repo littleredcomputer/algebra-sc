@@ -42,9 +42,6 @@ class MonomialTest extends FlatSpec with Matchers {
     y * z2 * x2 should be (x2yz2)
     z2 * x2 * y should be (x2yz2)
   }
-  it should "can be exponentiated" in {
-    Monomial(List(3, 1, 2)) ^ 3 should be (Monomial(List(9, 3, 6)))
-  }
   it should "be mappable" in {
     Monomial(List(3,1,2)) map (_.tail) should be (Monomial(List(1,2)))
   }

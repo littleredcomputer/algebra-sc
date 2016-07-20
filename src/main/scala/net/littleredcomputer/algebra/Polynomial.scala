@@ -17,7 +17,7 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   lazy val degree: Int = if (terms.isEmpty) -1 else (terms map (_.monomial.degree)).max
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
-  private def k(r: R) = Term(r, Monomial(Seq.fill(arity)(0)))
+  private def k(r: R) = Term(r, Monomial.unit(arity))
   def +(y: Polynomial[R]) = Polynomial.make(terms ++ y.terms)
   def +(y: Term[R]) = Polynomial.make(y :: terms)
   def +(y: R) = Polynomial.make(k(y) :: terms)
@@ -30,7 +30,8 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   def ^(e: Int): Polynomial[R] = e match {
     case 0 => Polynomial(List(Term(R.one, Monomial.unit(arity))))
     case 1 => this
-    case _ => this * (this^(e-1))
+    case x if x > 1 => this * (this^(e-1))
+    case _ => throw new IllegalArgumentException("negative polynomial exponent")
   }
   def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
@@ -124,5 +125,18 @@ object Polynomial {
   // experiment with variance: why can't a Polynomial[Nothing] serve as a zero element?
   def zero[T]() (implicit R: Ring[T]) = make[T](List())
 
-  def variables[R](arity: Int) (implicit R: Ring[R]) = for {i <- 0 until arity} yield Polynomial(List(Term(R.one, Monomial.basis(i, arity))))
+
+  private def variables[R](arity: Int) (implicit R: Ring[R]): IndexedSeq[Polynomial[R]] = for {i <- 0 until arity} yield Polynomial(List(Term(R.one, Monomial.basis(i, arity))))
+  def vars1[R](f: Polynomial[R] => Unit)(implicit R: Ring[R]) = {
+    val vs = variables(1)
+    f(vs(0))
+  }
+  def vars2[R](f: (Polynomial[R], Polynomial[R]) => Unit)(implicit R: Ring[R]) = {
+    val vs = variables(2)
+    f(vs(0), vs(1))
+  }
+  def vars3[R](f: (Polynomial[R], Polynomial[R], Polynomial[R]) => Unit)(implicit R: Ring[R]) = {
+    val vs = variables(3)
+    f(vs(0), vs(1), vs(2))
+  }
 }

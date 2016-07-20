@@ -9,7 +9,6 @@ case class Term[R] (coefficient: R, monomial: Monomial) {
     * Maps the coefficient from the ring R to the ring S. The exponents
     * are not modified.
     * @param f the mapping
-    * @param S the target ring
     * @tparam S the target ring
     * @return the term transported by f into the ring S
     */
@@ -24,7 +23,4 @@ case class Term[R] (coefficient: R, monomial: Monomial) {
   def mapx(f: Seq[Int] => Seq[Int]) = Term(coefficient, monomial map f)
 
   override def toString = coefficient + "×" + monomial
-}
-
-object Term {
 }
