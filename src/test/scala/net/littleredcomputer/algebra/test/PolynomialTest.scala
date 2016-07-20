@@ -2,11 +2,11 @@ package net.littleredcomputer.algebra.test
 
 import net.littleredcomputer.algebra.{Monomial, Polynomial, Ring, Term}
 import org.apache.commons.math3.fraction.BigFraction
-import org.scalacheck.{Arbitrary, Gen, Properties}
-import org.scalacheck.Prop.{BooleanOperators, forAll}
-import org.scalatest._
 import org.scalacheck.Gen._
-import org.scalacheck.Test.Parameters
+import org.scalacheck.Prop.{BooleanOperators, forAll}
+import org.scalacheck.{Arbitrary, Gen, Properties}
+import org.scalatest._
+import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
 object Implicits {
   implicit val arbitraryRational: Arbitrary[BigFraction] = Arbitrary { for {
@@ -164,22 +164,6 @@ class PolynomialSuite extends FlatSpec with Matchers {
   }
 }
 
-// Tricky to figure out how to supply the necessary implicits to this style of test!
-//class PTestZ2 extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
-//  implicit val arity = 2
-//  import Implicits.arbitraryPolynomial
-//  val z = Polynomial.zero[Int]
-//  type Zx = Polynomial[Int]
-//  forAll { (p: Polynomial[Int], q: Polynomial[Int]) =>
-//    p + q should be (q + p)
-//  } (generatorDrivenConfig, Implicits.arbitraryPolynomial[Int], null, Implicits.arbitraryPolynomial[Int], null)
-////  forAll (Implicits.arbitraryPolynomial[Int], Implicits.arbitraryPolynomial[Int]) {
-////    (p: Polynomial[Int], q: Polynomial[Int]) =>
-////      p + q should be (q + p)
-////  }
-//
-//}
-
 object PTestZ extends Properties("Polynomial[Int]") {
   import Implicits.arbitraryPolynomial
   type Zx = Polynomial[Int]
@@ -206,6 +190,8 @@ object PTestZ extends Properties("Polynomial[Int]") {
 
 object DivTestZ extends Properties("DivTest[BigZ]") {
   import Implicits.arbitraryPolynomial
+
+
   for (x <- 1 to 3) {
     implicit val arity = x
     type BZx = Polynomial[BigInt]
@@ -215,22 +201,27 @@ object DivTestZ extends Properties("DivTest[BigZ]") {
   }
 }
 
-object PTestQ extends Properties("Polynomial[BigFraction]") {
-  import Implicits.arbitraryRational
-  import Implicits.arbitraryPolynomial
-  override def overrideParameters(p: Parameters): Parameters = p.withMinSuccessfulTests(25)
+class PTestQ extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
+  import Implicits.{arbitraryPolynomial, arbitraryRational}
+  override implicit val generatorDrivenConfig: PropertyCheckConfig = PropertyCheckConfig(minSuccessful = 20)
   type Qx = Polynomial[BigFraction]
-
   for (x <- 1 to 3) {
     implicit val arity = x
-    property("+ is commutative a=" + arity) = forAll {
-      (p: Polynomial[BigFraction], q: Polynomial[BigFraction]) => p + q == q + p
+    "polynomials over Q" should "be commutative over addition, arity " + arity in {
+      forAll {
+        (p: Qx, q: Qx) => p + q should be (q + p)
+      }
     }
-    property("* is comm. a=" + arity) = forAll {
-      (p: Qx, q: Qx) => p * q == q * p
+    it should "be commutative over multiplication, arity " + arity in {
+      forAll {
+        (p: Qx, q: Qx) => p * q should be (q * p)
+      }
     }
-    property("* distributes over + a=" + arity) = forAll {
-      (p: Qx, q: Qx, r: Qx) => p * (q + r) == p * q + p * r
+    it should "satisfy distributivity of * over +, arity " + arity in {
+      forAll {
+        (p: Qx, q: Qx, r: Qx) => p * (q + r) should be (p * q + p * r)
+      }
     }
   }
 }
+

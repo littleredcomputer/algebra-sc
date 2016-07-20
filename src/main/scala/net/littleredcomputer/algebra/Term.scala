@@ -8,11 +8,12 @@ case class Term[R] (coefficient: R, monomial: Monomial) {
   /**
     * Maps the coefficient from the ring R to the ring S. The exponents
     * are not modified.
+    *
     * @param f the mapping
     * @tparam S the target ring
-    * @return the term transported by f into the ring S
+    * @return the term in the ring S under f
     */
-  def map[S](f: R => S) = Term(f(coefficient), monomial)
+  def map[S](f: R => S): Term[S] = Term(f(coefficient), monomial)
 
   /**
     * Maps the exponent sequence. The coefficient is unmodified and the base
