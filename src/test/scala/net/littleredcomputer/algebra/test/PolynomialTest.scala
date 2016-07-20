@@ -2,11 +2,11 @@ package net.littleredcomputer.algebra.test
 
 import net.littleredcomputer.algebra.{Monomial, Polynomial, Ring, Term}
 import org.apache.commons.math3.fraction.BigFraction
-import org.scalacheck.{Arbitrary, Gen, Properties}
-import org.scalacheck.Prop.{BooleanOperators, forAll}
-import org.scalatest._
 import org.scalacheck.Gen._
-import org.scalacheck.Test.Parameters
+import org.scalacheck.Prop.forAll
+import org.scalacheck.{Arbitrary, Gen, Properties}
+import org.scalatest._
+import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
 object Implicits {
   implicit val arbitraryRational: Arbitrary[BigFraction] = Arbitrary { for {
@@ -28,29 +28,14 @@ object Implicits {
   }
 }
 
-class MonomialSuite extends FlatSpec with Matchers {
-  val x = Monomial(List(1))
-  "Monomial multiplication" should "be commutative" in {
-    val y = Monomial(List(2))
-    x * y should be (y * x)
-  }
-  val one = Term(1, Monomial(List(0)))
-  val z = Polynomial.zero[Int]
-
-  "The zero polynomial" should "annihilate any other" in {
-    val p = Polynomial.make(Term(1, x))
-    p * z should be (z)
-    z * p should be (z)
-  }
-}
-
 class UnivariateSuite extends FlatSpec with Matchers {
   val x = Monomial(List(1))
   val one = Term(1, Monomial(List(0)))
+  val mone = Term(-1, Monomial(List(0)))
   val z = Polynomial.zero[Int]
-  val x2m1 = Polynomial.make(List(Term(1, x*x), -one))
+  val x2m1 = Polynomial.make(List(Term(1, x*x), mone))
   val xp1 = Polynomial.make(List(Term(1, x), one))
-  val xm1 = Polynomial.make(List(Term(1, x), -one))
+  val xm1 = Polynomial.make(List(Term(1, x), mone))
   "Simple divisions" should "work" in {
     x2m1 divide xp1 should be (xm1, z)
     x2m1 divide xm1 should be (xp1, z)
@@ -61,6 +46,8 @@ class UnivariateSuite extends FlatSpec with Matchers {
 }
 
 class RemainderTest extends FlatSpec with Matchers {
+  import scala.language.implicitConversions
+  implicit def toRational(x: Int): BigFraction = new BigFraction(x)
   def P(as: Int*) = Polynomial.makeDenseUnivariate[Int](as.toList)
   val u = P(-5, 2, 8, -3, -3, 0, 1, 0, 1)
   val v = P(21, -9, -4, 0, 5, 0, 3)
@@ -76,8 +63,8 @@ class RemainderTest extends FlatSpec with Matchers {
   }
   it should "work over Q" in {
     uq divide vq should be (
-      Polynomial.makeDenseUnivariate[BigFraction](List(new BigFraction(-2, 9), BigFraction.ZERO, new BigFraction(1, 3))),
-      Polynomial.makeDenseUnivariate[BigFraction](List(new BigFraction(-1, 3), BigFraction.ZERO, new BigFraction(1, 9), BigFraction.ZERO, new BigFraction(-5, 9)))
+      Polynomial.makeDenseUnivariate[BigFraction](List(-2 divide 9, 0, 1 divide 3)),
+      Polynomial.makeDenseUnivariate[BigFraction](List(-1 divide 3, 0, 1 divide 9, 0, -5 divide 9))
     )
   }
   it should "pseudo-divide over Z" in {
@@ -87,38 +74,33 @@ class RemainderTest extends FlatSpec with Matchers {
     P(1, 1, 0, 1) pseudoRemainder P(1, 1, 3) should be (P(10, 7), 2)
     P(3, 0, 4) pseudoRemainder P(2, 2) should be (P(28), 2)
     P(7) pseudoRemainder P(2) should be (P(0), 1)
-
   }
-  // where we left off: Z division fails, Q division works, but we want working pseudo-division over Z
-  // which brings up an interesting point: does pseudo-division have to happen over an integral domain?
 }
 
 abstract class VariablesTest[R] (implicit R: Ring[R]) extends FlatSpec with Matchers {
-  Term.variables[R](3) match {
-    case Seq(x, y, z) =>
-      "variables" should "produce usable terms" in {
-        x should be (Term[R](R.one, Monomial(List(1, 0, 0))))
-        y should be (Term[R](R.one, Monomial(List(0, 1, 0))))
-        x*y should be (Term[R](R.one, Monomial(List(1, 1, 0))))
-      }
-      it should "produce polynomials when added" in {
-        x+y should be (Polynomial.make[R](List(x, y)))
-      }
-      it should "terms can exponentiate" in {
-        z^5 should be(Term[R](R.one, Monomial(List(0, 0, 5))))
-      }
+  Polynomial.vars3[R] { (x, y, z) =>
+    "variables" should "produce usable one-term polynomials" in {
+      x should be (Polynomial.make[R](List(Term(R.one, Monomial(List(1, 0, 0))))))
+      y should be (Polynomial.make[R](List(Term(R.one, Monomial(List(0, 1, 0))))))
+      x*y should be (Polynomial.make[R](List(Term(R.one, Monomial(List(1, 1, 0))))))
+    }
+    it should "produce polynomials when added" in {
+      x+y should be (Polynomial.make[R](List(x.leadingTerm, y.leadingTerm)))
+    }
+    it should "terms can exponentiate" in {
+      z^5 should be(Polynomial.make[R](List(Term[R](R.one, Monomial(List(0, 0, 5))))))
+    }
   }
 }
 
 class ZVariablesTest extends VariablesTest[Int] {
-  Term.variables[Int](3) match {
-    case Seq(x, y, z) =>
-      it should "accept addition by a constant" in {
-        y+5 should be (Polynomial.make(List(y, Term(5, Monomial(List(0,0,0))))))
-        y+(z+5) should be (Polynomial.make(z :: (y+5).terms))
-        (y+z)+5 should be (Polynomial.make(z :: (y+5).terms))
-        y+z+5 should be (Polynomial.make(z :: (y+5).terms))
-      }
+  Polynomial.vars3[Int] { (x, y, z) =>
+    it should "accept addition by a constant" in {
+      y+5 should be (Polynomial.make(List(y.leadingTerm, Term(5, Monomial(List(0,0,0))))))
+      y+(z+5) should be (Polynomial.make(z.leadingTerm :: (y+5).terms))
+      (y+z)+5 should be (Polynomial.make(z.leadingTerm :: (y+5).terms))
+      y+z+5 should be (Polynomial.make(z.leadingTerm :: (y+5).terms))
+    }
   }
 }
 
@@ -128,73 +110,53 @@ class BVariablesTest extends VariablesTest[BigInt] {}
 
 class PolynomialSuite extends FlatSpec with Matchers {
   val one = Polynomial.make(List(Term(1, Monomial(List(0, 0)))))
-  println("one", one)
-  println("one*2", one * 2)
-  Term.variables[Int](2) match {
-    case Seq(x, y) =>
-      "Multiple quotient divisions" should "pass Ex.1 (p.61)" in {
-        // CLO p.61
-        val f = x*y*y + 1
-        val f1 = x*y + 1
-        val f2 = y + 1
-        f divide List(f1, f2) should be (List(Polynomial.make(y), -one), one * 2)
+  Polynomial.vars2[Int] { (x, y) =>
+    "Multiple quotient divisions" should "pass Ex.1 (p.61)" in {
+      // CLO p.61
+      val f = x * y * y + 1
+      val f1 = x * y + 1
+      val f2 = y + 1
+      f divide List(f1, f2) should be(List(y, -one), one * 2)
+    }
+    it should "pass Ex.2 (p.62)" in {
+      val f = x * x * y + x * y * y + y * y
+      val f1 = x * y - 1
+      val f2 = y * y - 1
+      f divide List(f1, f2) should be(List(x + y, one), x + y + 1)
+    }
+    it should "pass Ex.4 (p.66)" in {
+      val f = x * x * y + x * y * y + y * y
+      val f1 = y * y - 1
+      val f2 = x * y - 1
+      f divide List(f1, f2) should be(List(x + 1, x), x + x + 1)
+    }
+    it should "pass Ex.5 (p.67)" in {
+      val f = x * y * y - x
+      val f1 = x * y + 1
+      val f2 = y * y - 1
+      val zero = Polynomial.zero[Int]
+      f divide List(f1, f2) should be(List(y, zero), -x - y)
+      f divide List(f2, f1) should be(List(x, zero), zero)
+    }
+    "Lowering arity" should "work" in {
+      val p = y * (x ^ 2) + (x ^ 2) + x * y - x + y
+      val q = p.lower
+      Polynomial.vars1[Int] { w =>
+        q should be(Polynomial(List(Term(w + 1, Monomial(List(2))), Term(w - 1, Monomial(List(1))), Term(w, Monomial(List(0))))))
       }
-      it should "pass Ex.2 (p.62)" in {
-        val f = x*x*y + x*y*y + y*y
-        val f1 = x*y - 1
-        val f2 = y*y - 1
-        f divide List(f1, f2) should be (List(x + y, one), x + y + 1)
-      }
-      it should "pass Ex.4 (p.66)" in {
-        val f = x*x*y + x*y*y + y*y
-        val f1 = y*y - 1
-        val f2 = x*y - 1
-        f divide List(f1, f2) should be (List(x + 1, Polynomial.make(x)), x + x + 1)
-      }
-      it should "pass Ex.5 (p.67)" in {
-        val f = x*y*y - x
-        val f1 = x*y + 1
-        val f2 = y*y - 1
-        val zero = Polynomial.zero[Int]
-        f divide List(f1, f2) should be (List(Polynomial.make(y), zero), - x - y)
-        f divide List(f2, f1) should be (List(Polynomial.make(x), zero), zero)
-      }
-      "Lowering arity" should "work" in {
-        val p = y*(x^2) + (x^2) + x*y - x + y
-        val q = p.lower
-        val w = Term[Int](1, Monomial(List(1)))
-        val o = Term[Int](1, Monomial(List(0)))
-        q should be (Polynomial.make(List(Term(w + o, Monomial(List(2))), Term(w - o, Monomial(List(1))), Term(Polynomial.make(w), Monomial(List(0))))))
-      }
+    }
   }
 }
 
 class SPolynomialTest extends FlatSpec with Matchers {
-  Term.variables[BigFraction](2) match {
-    case Seq(x, y) =>
-      val f = (x ^ 3) * (y ^ 2) - (x ^ 2) * (y ^ 3) + x
-      val g = (x ^ 4) * y * new BigFraction(3) + (y ^ 2)
-      "S polynomials" should "check over Q" in {
-        f S g should be(- (x^3) * (y^3) + (x^2) - (y^3) * BigFraction.ONE_THIRD)
-      }
+  Polynomial.vars2[BigFraction] { (x, y) =>
+    val f = (x ^ 3) * (y ^ 2) - (x ^ 2) * (y ^ 3) + x
+    val g = (x ^ 4) * y * new BigFraction(3) + (y ^ 2)
+    "S polynomials" should "check over Q" in {
+      f S g should be(- (x^3) * (y^3) + (x^2) - (y^3) * BigFraction.ONE_THIRD)
+    }
   }
 }
-
-// Tricky to figure out how to supply the necessary implicits to this style of test!
-//class PTestZ2 extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
-//  implicit val arity = 2
-//  import Implicits.arbitraryPolynomial
-//  val z = Polynomial.zero[Int]
-//  type Zx = Polynomial[Int]
-//  forAll { (p: Polynomial[Int], q: Polynomial[Int]) =>
-//    p + q should be (q + p)
-//  } (generatorDrivenConfig, Implicits.arbitraryPolynomial[Int], null, Implicits.arbitraryPolynomial[Int], null)
-////  forAll (Implicits.arbitraryPolynomial[Int], Implicits.arbitraryPolynomial[Int]) {
-////    (p: Polynomial[Int], q: Polynomial[Int]) =>
-////      p + q should be (q + p)
-////  }
-//
-//}
 
 object PTestZ extends Properties("Polynomial[Int]") {
   import Implicits.arbitraryPolynomial
@@ -205,7 +167,7 @@ object PTestZ extends Properties("Polynomial[Int]") {
     property("+ is commutative a=" + arity) = forAll {
       (p: Zx, q: Zx) => p + q == q + p
     }
-    property("* is comm. a=" + arity) = forAll {
+    property("* is commutative a=" + arity) = forAll {
       (p: Zx, q: Zx) => p * q == q * p
     }
     property("* distributes over + a=" + arity) = forAll {
@@ -220,33 +182,43 @@ object PTestZ extends Properties("Polynomial[Int]") {
   }
 }
 
-object DivTestZ extends Properties("DivTest[BigZ]") {
+class PTestBigZ extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
   import Implicits.arbitraryPolynomial
-  for (x <- 1 to 3) {
-    implicit val arity = x
-    type BZx = Polynomial[BigInt]
-    property("pq / p == q, a=" + arity) = forAll {
-      (p: BZx, q: BZx) => (!p.isZero && !q.isZero) ==> (((p * q) divide p) == (q, Polynomial.zero[BigInt]))
+  override implicit val generatorDrivenConfig: PropertyCheckConfig = PropertyCheckConfig(minSuccessful = 20)
+  type BZx = Polynomial[BigInt]
+  for (a <- 1 to 3) {
+    implicit val arity = a
+    "polynomials over BigZ" should "divide correctly, arity " + arity in {
+      forAll {
+        (p: BZx, q: BZx) => whenever(!p.isZero && !q.isZero) {
+          (p * q) divide p should be ((q, Polynomial.zero[BigInt]))
+        }
+      }
     }
   }
 }
 
-object PTestQ extends Properties("Polynomial[BigFraction]") {
-  import Implicits.arbitraryRational
-  import Implicits.arbitraryPolynomial
-  override def overrideParameters(p: Parameters): Parameters = p.withMinSuccessfulTests(25)
+class PTestQ extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
+  import Implicits.{arbitraryPolynomial, arbitraryRational}
+  override implicit val generatorDrivenConfig: PropertyCheckConfig = PropertyCheckConfig(minSuccessful = 20)
   type Qx = Polynomial[BigFraction]
-
   for (x <- 1 to 3) {
     implicit val arity = x
-    property("+ is commutative a=" + arity) = forAll {
-      (p: Polynomial[BigFraction], q: Polynomial[BigFraction]) => p + q == q + p
+    "polynomials over Q" should "be commutative over addition, arity " + arity in {
+      forAll {
+        (p: Qx, q: Qx) => p + q should be (q + p)
+      }
     }
-    property("* is comm. a=" + arity) = forAll {
-      (p: Qx, q: Qx) => p * q == q * p
+    it should "be commutative over multiplication, arity " + arity in {
+      forAll {
+        (p: Qx, q: Qx) => p * q should be (q * p)
+      }
     }
-    property("* distributes over + a=" + arity) = forAll {
-      (p: Qx, q: Qx, r: Qx) => p * (q + r) == p * q + p * r
+    it should "satisfy distributivity of * over +, arity " + arity in {
+      forAll {
+        (p: Qx, q: Qx, r: Qx) => p * (q + r) should be (p * q + p * r)
+      }
     }
   }
 }
+

@@ -6,8 +6,8 @@ package net.littleredcomputer.algebra
 
 import scala.annotation.tailrec
 
-class Polynomial[R] private (val terms: List[Term[R]]) (implicit R: Ring[R]) {
-  // the monomials of a polynomial must all have the same arity.
+trait APolynomial[R] {
+  def terms: List[Term[R]]
   private def computeArity = {
     val arities = (terms map (_.monomial.arity)).distinct
     require(arities.length <= 1, "All monomials of a polynomial must have the same arity")
@@ -15,45 +15,48 @@ class Polynomial[R] private (val terms: List[Term[R]]) (implicit R: Ring[R]) {
   }
   lazy val arity: Int = computeArity
   lazy val degree: Int = if (terms.isEmpty) -1 else (terms map (_.monomial.degree)).max
+  def isZero = terms.isEmpty
+  def leadingTerm = terms.head
+  protected def constant(r: R) = Term(r, Monomial.unit(arity))
+}
 
-  // Since we are experimenting with not being case class...
-  // (because pattern matching on Polynomial objects is probably
-  // never useful and we may need to implement subclasses of polynomial
-  // on different types of ring), we need Odersky-approved equality
-  // and hashCode methods. The good news is our constituents are case classes and so
-  // their equality is well-defined.
-  def canEqual(other: Any): Boolean = other.isInstanceOf[Polynomial[R]]
-  override def equals(other: Any): Boolean = other match {
-    case that: Polynomial[R] => (that canEqual this) && (terms == that.terms)
-    case _ => false
-  }
-  override def hashCode: Int = terms.##
-
-  // Possibly suspicious lift from term to polynomial
-  implicit def termToPolynomial(t: Term[R]): Polynomial[R] = new Polynomial[R](List(t))
-
-  private def k(r: R) = Term(r, Monomial(Seq.fill(arity)(0)))
+case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Ring[R]) extends APolynomial[R] {
+  // the monomials of a polynomial must all have the same arity.
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
   def +(y: Polynomial[R]) = Polynomial.make(terms ++ y.terms)
   def +(y: Term[R]) = Polynomial.make(y :: terms)
-  def +(y: R) = Polynomial.make(k(y) :: terms)
-  def -(y: Polynomial[R]) = this + -y
-  def -(y: Term[R]) = Polynomial.make(-y :: terms)
+  def +(y: R) = Polynomial.make(constant(y) :: terms)
+  def -(y: Term[R]) = Polynomial.make(Term(R.unary_-(y.coefficient), y.monomial) :: terms)
   def -(y: R) = this + R.unary_-(y)
-  def *(y: Polynomial[R]) = Polynomial.make(for { x <- terms; y <- y.terms } yield x * y)
-  def *(y: Term[R]) = Polynomial.make(for { t <- terms } yield t * y)
+  def *(y: Polynomial[R]) = Polynomial.make(for { t <- terms; y <- y.terms } yield Term(R.*(t.coefficient, y.coefficient), t.monomial * y.monomial))
+  def *(y: Term[R]) = Polynomial.make(for { t <- terms } yield Term(R.*(t.coefficient, y.coefficient), t.monomial * y.monomial))
   def *(y: R) = map(c => R.*(c, y))
+  def unit: Polynomial[R] = new Polynomial(List(Term(R.one, Monomial.unit(arity))))
+  def ^(e: Int): Polynomial[R] = {
+    @tailrec def step(x: Polynomial[R], e: Int, r: Polynomial[R]): Polynomial[R] = if (e == 0) r
+      else if (e % 2 == 0) step (x * x, e/2, r)
+      else step(x, e-1, x*r)
+    step(this, e, unit)
+  }
   def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
-  def isZero = terms.isEmpty
-  def leadingTerm = terms.head
+  def -(y: Polynomial[R]) = this + (-y)
+  def /?(p: Term[R], q: Term[R]): Option[Term[R]] = {
+    val qx = (p.monomial.exponents, q.monomial.exponents).zipped map (_ - _)
+    if (qx.forall(_ >= 0)) {
+      R./%(p.coefficient, q.coefficient) match {
+        case (quotient, remainder) if remainder == R.zero => Some(Term[R](quotient, Monomial(qx)))
+        case _ => None
+      }
+    } else None
+  }
   def divide(ys: Seq[Polynomial[R]]) = {
     // Cox, Little & O'Shea "Ideals, Varieties and Algorithms 2.3 Theorem 3
     val ysi = ys.zipWithIndex
     @tailrec def step(p: Polynomial[R], qs: List[List[Term[R]]], remainder: List[Term[R]]): (List[Polynomial[R]], Polynomial[R]) = {
       @tailrec def findDivisor(ysi: Seq[(Polynomial[R], Int)]): Option[(Term[R], Int)] = ysi match {
-        case (d, i) :: ds => p.leadingTerm /? d.leadingTerm match {
+        case (d, i) :: ds => /?(p.leadingTerm, d.leadingTerm) match {
           case Some(divisor) => Some(divisor, i)
           case None => findDivisor(ds)
         }
@@ -70,8 +73,8 @@ class Polynomial[R] private (val terms: List[Term[R]]) (implicit R: Ring[R]) {
     // The CLO algorithm above, simplified for a single divisor.
     @tailrec def step(p: Polynomial[R], quotient: List[Term[R]], remainder: List[Term[R]]): (Polynomial[R], Polynomial[R]) = {
       if (p.isZero) (Polynomial.make(quotient), Polynomial.make(remainder)) else {
-        p.leadingTerm /? y.leadingTerm match {
-          case Some(q) => step(p - q * y, q :: quotient, remainder)
+        /?(p.leadingTerm, y.leadingTerm) match {
+          case Some(q) => step(p - y * q, q :: quotient, remainder)
           case None => step(p - p.leadingTerm, quotient, p.leadingTerm :: remainder)
         }
       }
@@ -95,7 +98,7 @@ class Polynomial[R] private (val terms: List[Term[R]]) (implicit R: Ring[R]) {
   // whether we want to introduce subclassing based upon whether the base rings
   // are Euclidean. If we don't do it now, the code risks becoming less principled.
   def S(y: Polynomial[R]) = {
-    val xGamma = Term(R.one, leadingTerm.monomial lcm y.leadingTerm.monomial)
+    val xGamma = Polynomial(List(Term(R.one, leadingTerm.monomial lcm y.leadingTerm.monomial)))
     ((xGamma * this) divide this.leadingTerm)._1 - ((xGamma * y) divide y.leadingTerm)._1
   }
   def lower(implicit Rx: Ring[Polynomial[R]]) = {
@@ -119,6 +122,10 @@ class Polynomial[R] private (val terms: List[Term[R]]) (implicit R: Ring[R]) {
   }
 }
 
+class EuclideanPolynomial[R] (override val terms: List[Term[R]]) (implicit R: EuclideanRing[R]) extends Polynomial[R](terms) {
+  def eucplus(y: EuclideanPolynomial[R]): EuclideanPolynomial[R] = (this + y).asInstanceOf[EuclideanPolynomial[R]]
+}
+
 object Polynomial {
   def make[R](ts: Seq[Term[R]])(implicit R: Ring[R]) = {
     val terms = for {
@@ -133,5 +140,20 @@ object Polynomial {
     Polynomial.make[R](cs.zipWithIndex map {case (c, i) => Term[R](c, Monomial(List(i)))})
   }
   // experiment with variance: why can't a Polynomial[Nothing] serve as a zero element?
-  def zero[T]() (implicit R: Ring[T]) = make[T](List())
+  def zero[T] (implicit R: Ring[T]) = make[T](List())
+
+
+  private def variables[R](arity: Int) (implicit R: Ring[R]): IndexedSeq[Polynomial[R]] = for {i <- 0 until arity} yield Polynomial(List(Term(R.one, Monomial.basis(i, arity))))
+  def vars1[R](f: Polynomial[R] => Unit)(implicit R: Ring[R]) = {
+    val vs = variables(1)
+    f(vs(0))
+  }
+  def vars2[R](f: (Polynomial[R], Polynomial[R]) => Unit)(implicit R: Ring[R]) = {
+    val vs = variables(2)
+    f(vs(0), vs(1))
+  }
+  def vars3[R](f: (Polynomial[R], Polynomial[R], Polynomial[R]) => Unit)(implicit R: Ring[R]) = {
+    val vs = variables(3)
+    f(vs(0), vs(1), vs(2))
+  }
 }

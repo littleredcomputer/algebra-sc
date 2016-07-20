@@ -4,6 +4,7 @@
       <w>arities</w>
       <w>scalacheck</w>
       <w>scalatest</w>
+      <w>scoverage</w>
       <w>univariate</w>
     </words>
   </dictionary>

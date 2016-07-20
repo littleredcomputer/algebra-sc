@@ -13,69 +13,61 @@ trait Ring[T] {
   def *(x: T, y: T): T
   def +(x: T, y: T): T
   def unary_-(x: T): T
-  def /?(x: T, y: T): Option[T]
+  def /%(x: T, y: T): (T, T)
   def ^(x: T, e: Int): T = {
-    @tailrec def step(x: T, b: Int, r: T): T = if (b == 0) r
-      else if (b % 2 == 0) step(*(x, x), b / 2, r)
-      else step(x, b - 1, *(x, r))
+    @tailrec def step(x: T, e: Int, r: T): T = if (e == 0) r
+      else if (e % 2 == 0) step(*(x, x), e / 2, r)
+      else step(x, e - 1, *(x, r))
     step(x, e, one)
   }
 }
 
+trait EuclideanRing[R] extends Ring[R] {
+  def booya = 999
+}
+
 object Ring {
   implicit object Z extends Ring[Int] {
-    def zero = 0
-    def one = 1
-    def *(x: Int, y: Int) = x * y
-    def +(x: Int, y: Int) = x + y
-    def unary_-(x: Int) = -x
-    def /?(x: Int, y: Int) = {
-      require(y != 0)
-      if (x % y == 0) Some(x/y) else None
-    }
+    override def zero = 0
+    override def one = 1
+    override def *(x: Int, y: Int) = x * y
+    override def +(x: Int, y: Int) = x + y
+    override def unary_-(x: Int) = -x
+    override def /%(x: Int, y: Int) = (x/y, x%y)
   }
   implicit object BigZ extends Ring[BigInt] {
-    def zero = 0
-    def one = 1
-    def *(x: BigInt, y: BigInt) = x * y
-    def +(x: BigInt, y: BigInt) = x + y
-    def unary_-(x: BigInt) = -x
-    def /?(x: BigInt, y: BigInt) = {
-      require(y != 0)
-      if (x % y == 0) Some(x/y) else None
-    }
+    override def zero = 0
+    override def one = 1
+    override def *(x: BigInt, y: BigInt) = x * y
+    override def +(x: BigInt, y: BigInt) = x + y
+    override def unary_-(x: BigInt) = -x
+    override def /%(x: BigInt, y: BigInt) = x /% y
     override def ^(x: BigInt, y: Int) = x.pow(y)
   }
   implicit object R extends Ring[Double] {
-    def zero = 0.0
-    def one = 1.0
-    def *(x: Double, y: Double) = x * y
-    def +(x: Double, y: Double) = x + y
-    def unary_-(x: Double) = -x
-    def /?(x: Double, y: Double) = {
-      require(y != 0)
-      Some(x/y)
-    }
+    override def zero = 0.0
+    override def one = 1.0
+    override def *(x: Double, y: Double) = x * y
+    override def +(x: Double, y: Double) = x + y
+    override def unary_-(x: Double) = -x
+    override def /%(x: Double, y: Double) = (x/y, 0.0)
     override def ^(x: Double, y: Int) = Math.pow(x, y)
   }
   implicit object Zx extends Ring[Polynomial[Int]] {
-    def zero = Polynomial.make[Int](List())
-    def one = ???
-    def *(x: Polynomial[Int], y: Polynomial[Int]) = x * y
-    def +(x: Polynomial[Int], y: Polynomial[Int]) = x + y
-    def unary_-(x: Polynomial[Int]) = -x
-    def /?(x: Polynomial[Int], y: Polynomial[Int]) = ???
+    override def zero = Polynomial.make[Int](List())
+    override def one = ???
+    override def *(x: Polynomial[Int], y: Polynomial[Int]) = x * y
+    override def +(x: Polynomial[Int], y: Polynomial[Int]) = x + y
+    override def unary_-(x: Polynomial[Int]) = -x
+    override def /%(x: Polynomial[Int], y: Polynomial[Int]) = ???
   }
   implicit object Q extends Ring[BigFraction] {
-    def zero = BigFraction.ZERO
-    def one = BigFraction.ONE
-    def *(x: BigFraction, y: BigFraction) = x.multiply(y)
-    def +(x: BigFraction, y: BigFraction) = x.add(y)
-    def unary_-(x: BigFraction) = x.negate()
-    def /?(x: BigFraction, y:BigFraction) = {
-      require(y != BigFraction.ZERO)
-      Some(x.divide(y))
-    }
+    override def zero = BigFraction.ZERO
+    override def one = BigFraction.ONE
+    override def *(x: BigFraction, y: BigFraction) = x.multiply(y)
+    override def +(x: BigFraction, y: BigFraction) = x.add(y)
+    override def unary_-(x: BigFraction) = x.negate()
+    override def /%(x: BigFraction, y: BigFraction) = (x divide y, BigFraction.ZERO)
     override def ^(x: BigFraction, y: Int) = x.pow(y)
   }
 }
