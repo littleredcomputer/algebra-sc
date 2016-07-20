@@ -3,7 +3,7 @@ package net.littleredcomputer.algebra.test
 import net.littleredcomputer.algebra.{Monomial, Polynomial, Ring, Term}
 import org.apache.commons.math3.fraction.BigFraction
 import org.scalacheck.Gen._
-import org.scalacheck.Prop.{BooleanOperators, forAll}
+import org.scalacheck.Prop.forAll
 import org.scalacheck.{Arbitrary, Gen, Properties}
 import org.scalatest._
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
@@ -25,22 +25,6 @@ object Implicits {
     })
 
     Gen.sized(sizedPoly)
-  }
-}
-
-class MonomialSuite extends FlatSpec with Matchers {
-  val x = Monomial(List(1))
-  "Monomial multiplication" should "be commutative" in {
-    val y = Monomial(List(2))
-    x * y should be (y * x)
-  }
-  val one = Term(1, Monomial(List(0)))
-  val z = Polynomial.zero[Int]
-
-  "The zero polynomial" should "annihilate any other" in {
-    val p = Polynomial(List(Term(1, x)))
-    p * z should be (z)
-    z * p should be (z)
   }
 }
 
@@ -124,8 +108,6 @@ class BVariablesTest extends VariablesTest[BigInt] {}
 
 class PolynomialSuite extends FlatSpec with Matchers {
   val one = Polynomial.make(List(Term(1, Monomial(List(0, 0)))))
-  println("one", one)
-  println("one*2", one * 2)
   Polynomial.vars2[Int] { (x, y) =>
     "Multiple quotient divisions" should "pass Ex.1 (p.61)" in {
       // CLO p.61
@@ -188,15 +170,17 @@ object PTestZ extends Properties("Polynomial[Int]") {
   }
 }
 
-object DivTestZ extends Properties("DivTest[BigZ]") {
+class PTestBigZ extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
   import Implicits.arbitraryPolynomial
-
-
-  for (x <- 1 to 3) {
-    implicit val arity = x
-    type BZx = Polynomial[BigInt]
-    property("pq / p == q, a=" + arity) = forAll {
-      (p: BZx, q: BZx) => (!p.isZero && !q.isZero) ==> (((p * q) divide p) == (q, Polynomial.zero[BigInt]))
+  override implicit val generatorDrivenConfig: PropertyCheckConfig = PropertyCheckConfig(minSuccessful = 20)
+  for (a <- 1 to 3) {
+    implicit val arity = a
+    "polynomials over BigZ" should "divide correctly, arity " + arity in {
+      forAll {
+        (p: Polynomial[BigInt], q: Polynomial[BigInt]) => whenever(!p.isZero && !q.isZero) {
+          (p * q) divide p should be ((q, Polynomial.zero[BigInt]))
+        }
+      }
     }
   }
 }

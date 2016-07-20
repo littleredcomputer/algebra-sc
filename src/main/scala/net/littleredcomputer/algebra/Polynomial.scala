@@ -26,12 +26,12 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   def *(y: Polynomial[R]) = Polynomial.make(for { t <- terms; y <- y.terms } yield Term(R.*(t.coefficient, y.coefficient), t.monomial * y.monomial))
   def *(y: Term[R]) = Polynomial.make(for { t <- terms } yield Term(R.*(t.coefficient, y.coefficient), t.monomial * y.monomial))
   def *(y: R) = map(c => R.*(c, y))
-  // TODO: recursive, switch to fast algorithm; barf on negative exponents, etc.
-  def ^(e: Int): Polynomial[R] = e match {
-    case 0 => Polynomial(List(Term(R.one, Monomial.unit(arity))))
-    case 1 => this
-    case x if x > 1 => this * (this^(e-1))
-    case _ => throw new IllegalArgumentException("negative polynomial exponent")
+  def unit: Polynomial[R] = new Polynomial(List(Term(R.one, Monomial.unit(arity))))
+  def ^(e: Int): Polynomial[R] = {
+    @tailrec def step(x: Polynomial[R], e: Int, r: Polynomial[R]): Polynomial[R] = if (e == 0) r
+      else if (e % 2 == 0) step (x * x, e/2, r)
+      else step(x, e-1, x*r)
+    step(this, e, unit)
   }
   def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
@@ -41,9 +41,9 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
   def /?(p: Term[R], q: Term[R]): Option[Term[R]] = {
     val qx = (p.monomial.exponents, q.monomial.exponents).zipped map (_ - _)
     if (qx.forall(_ >= 0)) {
-      R./?(p.coefficient, q.coefficient) match {
-        case Some(quotient) => Some(Term[R](quotient, Monomial(qx)))
-        case None => None
+      R./%(p.coefficient, q.coefficient) match {
+        case (quotient, remainder) if remainder == R.zero => Some(Term[R](quotient, Monomial(qx)))
+        case _ => None
       }
     } else None
   }
@@ -70,8 +70,8 @@ case class Polynomial[R] private (terms: List[Term[R]]) (implicit R: Ring[R]) {
     @tailrec def step(p: Polynomial[R], quotient: List[Term[R]], remainder: List[Term[R]]): (Polynomial[R], Polynomial[R]) = {
       if (p.isZero) (Polynomial.make(quotient), Polynomial.make(remainder)) else {
         /?(p.leadingTerm, y.leadingTerm) match {
-          case Some(q) => step(p - Polynomial(List(q)) * y, q :: quotient, remainder)
-          case None => step(p - Polynomial(List(p.leadingTerm)), quotient, p.leadingTerm :: remainder)
+          case Some(q) => step(p - y * q, q :: quotient, remainder)
+          case None => step(p - p.leadingTerm, quotient, p.leadingTerm :: remainder)
         }
       }
     }
@@ -123,7 +123,7 @@ object Polynomial {
     Polynomial.make[R](cs.zipWithIndex map {case (c, i) => Term[R](c, Monomial(List(i)))})
   }
   // experiment with variance: why can't a Polynomial[Nothing] serve as a zero element?
-  def zero[T]() (implicit R: Ring[T]) = make[T](List())
+  def zero[T] (implicit R: Ring[T]) = make[T](List())
 
 
   private def variables[R](arity: Int) (implicit R: Ring[R]): IndexedSeq[Polynomial[R]] = for {i <- 0 until arity} yield Polynomial(List(Term(R.one, Monomial.basis(i, arity))))
