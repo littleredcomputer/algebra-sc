@@ -1,6 +1,6 @@
 package net.littleredcomputer.algebra.test
 
-import net.littleredcomputer.algebra.{Monomial, Polynomial, Ring, Term}
+import net.littleredcomputer.algebra._
 import org.apache.commons.math3.fraction.BigFraction
 import org.scalacheck.Gen._
 import org.scalacheck.Prop.forAll
@@ -15,7 +15,7 @@ object Implicits {
   } yield new BigFraction(n, d) }
 
   implicit def arbitraryPolynomial[T](implicit a: Arbitrary[T],
-                                      R: Ring[T],
+                                      R: EuclideanRing[T],
                                       arity: Int): Arbitrary[Polynomial[T]] = Arbitrary {
     def sizedPoly(sz: Int) = for {
       exponents <- Gen.listOfN(sz, Gen.listOfN(arity, choose(0, 6)))
@@ -77,7 +77,7 @@ class RemainderTest extends FlatSpec with Matchers {
   }
 }
 
-abstract class VariablesTest[R] (implicit R: Ring[R]) extends FlatSpec with Matchers {
+abstract class VariablesTest[R] (implicit R: EuclideanRing[R]) extends FlatSpec with Matchers {
   Polynomial.vars3[R] { (x, y, z) =>
     "variables" should "produce usable one-term polynomials" in {
       x should be (Polynomial.make[R](List(Term(R.one, Monomial(List(1, 0, 0))))))

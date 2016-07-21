@@ -20,7 +20,7 @@ trait APolynomial[R] {
   protected def constant(r: R) = Term(r, Monomial.unit(arity))
 }
 
-case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Ring[R]) extends APolynomial[R] {
+case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: EuclideanRing[R]) extends APolynomial[R] {
   // the monomials of a polynomial must all have the same arity.
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
@@ -39,7 +39,7 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Ring[R]) 
       else step(x, e-1, x*r)
     step(this, e, unit)
   }
-  def map[S](f: R => S) (implicit S: Ring[S]) = Polynomial.make[S](terms map (_ map f))
+  def map[S](f: R => S) (implicit S: EuclideanRing[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
   def -(y: Polynomial[R]) = this + (-y)
   def /?(p: Term[R], q: Term[R]): Option[Term[R]] = {
@@ -101,7 +101,7 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Ring[R]) 
     val xGamma = Polynomial(List(Term(R.one, leadingTerm.monomial lcm y.leadingTerm.monomial)))
     ((xGamma * this) divide this.leadingTerm)._1 - ((xGamma * y) divide y.leadingTerm)._1
   }
-  def lower(implicit Rx: Ring[Polynomial[R]]) = {
+  def lower(implicit Rx: EuclideanRing[Polynomial[R]]) = {
     Polynomial.make((for ((x, qs) <- terms groupBy (_.monomial.exponents.head))
       yield Term(Polynomial.make(qs map {_.mapx (_.tail)}), Monomial(List(x)))
     ).toList)
@@ -122,12 +122,8 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Ring[R]) 
   }
 }
 
-class EuclideanPolynomial[R] (override val terms: List[Term[R]]) (implicit R: EuclideanRing[R]) extends Polynomial[R](terms) {
-  def eucplus(y: EuclideanPolynomial[R]): EuclideanPolynomial[R] = (this + y).asInstanceOf[EuclideanPolynomial[R]]
-}
-
 object Polynomial {
-  def make[R](ts: Seq[Term[R]])(implicit R: Ring[R]) = {
+  def make[R](ts: Seq[Term[R]])(implicit R: EuclideanRing[R]) = {
     val terms = for {
       (xs, cs) <- ts groupBy (_.monomial.exponents)
       c = (R.zero /: cs)((sum, c) => R.+(sum, c.coefficient))
@@ -135,24 +131,24 @@ object Polynomial {
     } yield Term(c, Monomial(xs))
     new Polynomial(terms.toList.sortBy(_.monomial)(Monomial.Ordering.GrLex))
   }
-  def make[R](t: Term[R]) (implicit R: Ring[R]) = new Polynomial(List(t))
-  def makeDenseUnivariate[R](cs: Seq[R]) (implicit R: Ring[R]): Polynomial[R] = {
+  def make[R](t: Term[R]) (implicit R: EuclideanRing[R]) = new Polynomial(List(t))
+  def makeDenseUnivariate[R](cs: Seq[R]) (implicit R: EuclideanRing[R]): Polynomial[R] = {
     Polynomial.make[R](cs.zipWithIndex map {case (c, i) => Term[R](c, Monomial(List(i)))})
   }
   // experiment with variance: why can't a Polynomial[Nothing] serve as a zero element?
-  def zero[T] (implicit R: Ring[T]) = make[T](List())
+  def zero[T] (implicit R: EuclideanRing[T]) = make[T](List())
 
 
-  private def variables[R](arity: Int) (implicit R: Ring[R]): IndexedSeq[Polynomial[R]] = for {i <- 0 until arity} yield Polynomial(List(Term(R.one, Monomial.basis(i, arity))))
-  def vars1[R](f: Polynomial[R] => Unit)(implicit R: Ring[R]) = {
+  private def variables[R](arity: Int) (implicit R: EuclideanRing[R]): IndexedSeq[Polynomial[R]] = for {i <- 0 until arity} yield Polynomial(List(Term(R.one, Monomial.basis(i, arity))))
+  def vars1[R](f: Polynomial[R] => Unit)(implicit R: EuclideanRing[R]) = {
     val vs = variables(1)
     f(vs(0))
   }
-  def vars2[R](f: (Polynomial[R], Polynomial[R]) => Unit)(implicit R: Ring[R]) = {
+  def vars2[R](f: (Polynomial[R], Polynomial[R]) => Unit)(implicit R: EuclideanRing[R]) = {
     val vs = variables(2)
     f(vs(0), vs(1))
   }
-  def vars3[R](f: (Polynomial[R], Polynomial[R], Polynomial[R]) => Unit)(implicit R: Ring[R]) = {
+  def vars3[R](f: (Polynomial[R], Polynomial[R], Polynomial[R]) => Unit)(implicit R: EuclideanRing[R]) = {
     val vs = variables(3)
     f(vs(0), vs(1), vs(2))
   }
