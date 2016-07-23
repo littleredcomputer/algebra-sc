@@ -25,6 +25,10 @@ trait EuclideanRing[T] extends RingWithUnity[T] {
   def /%(x: T, y: T): (T, T)
 }
 
+trait Field[T] extends EuclideanRing[T] {
+  def /(x: T, y: T): T
+}
+
 object EuclideanRing {
   implicit object Z extends EuclideanRing[Int] {
     override def zero = 0
@@ -60,7 +64,7 @@ object EuclideanRing {
     override def unary_-(x: Polynomial[Int]) = -x
     override def /%(x: Polynomial[Int], y: Polynomial[Int]) = x divide y
   }
-  implicit object Q extends EuclideanRing[BigFraction] {
+  implicit object Q extends Field[BigFraction] {
     override def zero = BigFraction.ZERO
     override def one = BigFraction.ONE
     override def *(x: BigFraction, y: BigFraction) = x.multiply(y)
@@ -68,5 +72,6 @@ object EuclideanRing {
     override def unary_-(x: BigFraction) = x.negate()
     override def /%(x: BigFraction, y: BigFraction) = (x divide y, BigFraction.ZERO)
     override def ^(x: BigFraction, y: Int) = x.pow(y)
+    override def /(x: BigFraction, y: BigFraction): BigFraction = x divide y
   }
 }

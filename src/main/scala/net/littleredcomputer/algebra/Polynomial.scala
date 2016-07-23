@@ -24,7 +24,7 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Euclidean
   // the monomials of a polynomial must all have the same arity.
   // This implementation doesn't take advantage of the sorted nature
   // of input monomial lists.
-  def +(y: Polynomial[R]) = Polynomial.make(terms ++ y.terms)
+  def +(y: Polynomial[R]): Polynomial[R] = Polynomial.make(terms ++ y.terms)
   def +(y: Term[R]) = Polynomial.make(y :: terms)
   def +(y: R) = Polynomial.make(constant(y) :: terms)
   def -(y: Term[R]) = Polynomial.make(Term(R.unary_-(y.coefficient), y.monomial) :: terms)
@@ -99,27 +99,44 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Euclidean
   // are Euclidean. If we don't do it now, the code risks becoming less principled.
   def S(y: Polynomial[R]) = {
     val xGamma = Polynomial(List(Term(R.one, leadingTerm.monomial lcm y.leadingTerm.monomial)))
+    // The use of _1 below is what makes this wrong.
     ((xGamma * this) divide this.leadingTerm)._1 - ((xGamma * y) divide y.leadingTerm)._1
   }
-  def lower(implicit Rx: EuclideanRing[Polynomial[R]]) = {
+  def lower(implicit Rx: EuclideanRing[Polynomial[R]]): Polynomial[Polynomial[R]] = {
     Polynomial.make((for ((x, qs) <- terms groupBy (_.monomial.exponents.head))
       yield Term(Polynomial.make(qs map {_.mapx (_.tail)}), Monomial(List(x)))
     ).toList)
   }
-  // Are we in trouble? How do we type evaluate so that
-  // given a p in P[P[R]] and an x in R, we get a P[R]?
-  // We would need a scalar multiplication operation
-  // defined on R x P[R} -> P[R} to get this to work.
-  // This suggests that the type of the evaluation variable
-  // is  a completely different type and we need some kind
-  // of implicit or combinator to represent this vector
-  // space operation.
   def evaluate(x: R): R = {
     require(arity == 1)
     (R.zero /: terms) {
       case (sum, Term(c, m)) => R.+(sum, R.*(c, R.^(x, m.exponents.head)))
     }
   }
+}
+
+
+
+object GroebnerBasis {
+  private def criticalPairs[F](s: List[Polynomial[F]]): List[(Polynomial[F], Polynomial[F])] = s match {
+    case x :: xs => (for {y <- xs} yield (x, y)) ++ criticalPairs(xs)
+    case Nil => Nil
+  }
+  def compute[F](fs: List[Polynomial[F]])(implicit F: Field[F]) = {
+    var G = fs.toSet
+    var Gprime = G.empty
+    var done = false
+    while (!done) {
+      Gprime = G
+      criticalPairs(Gprime.toList) foreach { case ((p: Polynomial[F], q: Polynomial[F])) =>
+        val (_, r) = (p S q) divide Gprime.toList
+        if (!r.isZero) G += r
+      }
+      if (G == Gprime) done = true
+    }
+    G
+  }
+  def of[F](fs: Polynomial[F]*)(implicit F: Field[F]) = compute(fs.toList)
 }
 
 object Polynomial {
@@ -152,4 +169,9 @@ object Polynomial {
     val vs = variables(3)
     f(vs(0), vs(1), vs(2))
   }
+}
+
+object xxx extends App {
+  def pairs(s: Seq[Int]): Seq[(Int, Int)] = if (s.nonEmpty) (for {y <- s.tail} yield (s.head, y)) ++ pairs(s.tail) else Seq()
+  println(pairs(1 to 100) take 10)
 }

@@ -148,6 +148,34 @@ class PolynomialSuite extends FlatSpec with Matchers {
   }
 }
 
+class GroebnerBasisTest extends FlatSpec with Matchers {
+    "Example 2.7.1" should "work" in {
+      Polynomial.vars2[BigFraction] { (x, y) =>
+        val f1 = (x ^ 3) - x * y * BigFraction.TWO
+        val f2 = (x ^ 2) * y - (y ^ 2) * BigFraction.TWO + x
+        GroebnerBasis.of(f1, f2) should be(Set(
+          (x ^ 3) - x * y * BigFraction.TWO,
+          (x ^ 2) * y - (y ^ 2) * BigFraction.TWO + x,
+          -(x ^ 2),
+          -x * y * BigFraction.TWO,
+          -(y ^ 2) * BigFraction.TWO + x
+        ))
+      }
+    }
+  // Might need to enable LEX order for polynomials to get this one to work.
+  // That raises an interesting question. The variables we supply will need
+  // to have lex order embedded within them in order to get the ordering to
+  // propagate to the polynomial arithmetic operations.
+//    "Example 2.8.2" should "work" in {
+//      Polynomial.vars3[BigFraction] { (x, y, z) =>
+//        val f1 = (x^2) + (y^2) + (z^2) - BigFraction.ONE
+//        val f2 = (x^2) + (z^2) - y
+//        val f3 = x - z
+//      GröbnerBasis.of(f1, f2, f3) should be ()
+//    }
+//  }
+}
+
 class SPolynomialTest extends FlatSpec with Matchers {
   Polynomial.vars2[BigFraction] { (x, y) =>
     val f = (x ^ 3) * (y ^ 2) - (x ^ 2) * (y ^ 3) + x
