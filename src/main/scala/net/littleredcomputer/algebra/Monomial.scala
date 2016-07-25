@@ -22,13 +22,13 @@ case class Monomial private (exponents: Seq[Int]) {
 
 object Monomial {
   object Ordering {
-    object Lex extends Ordering[Monomial] {
+    implicit object Lex extends Ordering[Monomial] {
       override def compare(x: Monomial, y: Monomial) = {
         val diff = (y.exponents, x.exponents).zipped map (_-_) dropWhile (_ == 0)
         if (diff.isEmpty) 0 else diff.head
       }
     }
-    object GrLex extends Ordering[Monomial] {
+    implicit object GrLex extends Ordering[Monomial] {
       override def compare(x: Monomial, y: Monomial): Int = {
         val grade = y.degree - x.degree
         if (grade != 0) grade else Lex.compare(x, y)

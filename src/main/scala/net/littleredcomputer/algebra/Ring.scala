@@ -57,7 +57,8 @@ object EuclideanRing {
     override def ^(x: Double, y: Int) = Math.pow(x, y)
   }
   implicit object Zx extends EuclideanRing[Polynomial[Int]] {
-    override def zero = Polynomial.make[Int](List())
+    // kind of suspicious: how do we want to handle the ordering of the "generic" zero polynomial?
+    override def zero = Polynomial.make[Int](List())(Z, Monomial.Ordering.GrLex)
     override def one = ???
     override def *(x: Polynomial[Int], y: Polynomial[Int]) = x * y
     override def +(x: Polynomial[Int], y: Polynomial[Int]) = x + y

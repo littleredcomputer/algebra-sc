@@ -16,6 +16,7 @@ object Implicits {
 
   implicit def arbitraryPolynomial[T](implicit a: Arbitrary[T],
                                       R: EuclideanRing[T],
+                                      O: Ordering[Monomial],
                                       arity: Int): Arbitrary[Polynomial[T]] = Arbitrary {
     def sizedPoly(sz: Int) = for {
       exponents <- Gen.listOfN(sz, Gen.listOfN(arity, choose(0, 6)))
@@ -29,6 +30,7 @@ object Implicits {
 }
 
 class UnivariateSuite extends FlatSpec with Matchers {
+  implicit def o: Ordering[Monomial] = Monomial.Ordering.GrLex
   val x = Monomial(List(1))
   val one = Term(1, Monomial(List(0)))
   val mone = Term(-1, Monomial(List(0)))
@@ -46,6 +48,7 @@ class UnivariateSuite extends FlatSpec with Matchers {
 }
 
 class RemainderTest extends FlatSpec with Matchers {
+  implicit def o: Ordering[Monomial] = Monomial.Ordering.GrLex
   import scala.language.implicitConversions
   implicit def toRational(x: Int): BigFraction = new BigFraction(x)
   def P(as: Int*) = Polynomial.makeDenseUnivariate[Int](as.toList)
@@ -78,6 +81,7 @@ class RemainderTest extends FlatSpec with Matchers {
 }
 
 abstract class VariablesTest[R] (implicit R: EuclideanRing[R]) extends FlatSpec with Matchers {
+  implicit def o: Ordering[Monomial] = Monomial.Ordering.GrLex
   Polynomial.vars3[R] { (x, y, z) =>
     "variables" should "produce usable one-term polynomials" in {
       x should be (Polynomial.make[R](List(Term(R.one, Monomial(List(1, 0, 0))))))
@@ -109,6 +113,7 @@ class RVariablesTest extends VariablesTest[Double] {}
 class BVariablesTest extends VariablesTest[BigInt] {}
 
 class PolynomialSuite extends FlatSpec with Matchers {
+  implicit def o: Ordering[Monomial] = Monomial.Ordering.GrLex
   val one = Polynomial.make(List(Term(1, Monomial(List(0, 0)))))
   Polynomial.vars2[Int] { (x, y) =>
     "Multiple quotient divisions" should "pass Ex.1 (p.61)" in {
@@ -149,34 +154,36 @@ class PolynomialSuite extends FlatSpec with Matchers {
 }
 
 class GroebnerBasisTest extends FlatSpec with Matchers {
-    "Example 2.7.1" should "work" in {
-      Polynomial.vars2[BigFraction] { (x, y) =>
-        val f1 = (x ^ 3) - x * y * BigFraction.TWO
-        val f2 = (x ^ 2) * y - (y ^ 2) * BigFraction.TWO + x
-        GroebnerBasis.of(f1, f2) should be(Set(
-          (x ^ 3) - x * y * BigFraction.TWO,
-          (x ^ 2) * y - (y ^ 2) * BigFraction.TWO + x,
-          -(x ^ 2),
-          -x * y * BigFraction.TWO,
-          -(y ^ 2) * BigFraction.TWO + x
-        ))
-      }
+  "Example 2.7.1" should "work" in {
+    implicit def defaultOrder: Ordering[Monomial] = Monomial.Ordering.GrLex
+    Polynomial.vars2[BigFraction] { (x, y) =>
+      val f1 = (x ^ 3) - x * y * BigFraction.TWO
+      val f2 = (x ^ 2) * y - (y ^ 2) * BigFraction.TWO + x
+      GroebnerBasis.of(f1, f2) should be(Set(
+        (x ^ 3) - x * y * BigFraction.TWO,
+        (x ^ 2) * y - (y ^ 2) * BigFraction.TWO + x,
+        -(x ^ 2),
+        -x * y * BigFraction.TWO,
+        -(y ^ 2) * BigFraction.TWO + x
+      ))
     }
+  }
   // Might need to enable LEX order for polynomials to get this one to work.
   // That raises an interesting question. The variables we supply will need
   // to have lex order embedded within them in order to get the ordering to
   // propagate to the polynomial arithmetic operations.
-//    "Example 2.8.2" should "work" in {
-//      Polynomial.vars3[BigFraction] { (x, y, z) =>
-//        val f1 = (x^2) + (y^2) + (z^2) - BigFraction.ONE
-//        val f2 = (x^2) + (z^2) - y
-//        val f3 = x - z
-//      GröbnerBasis.of(f1, f2, f3) should be ()
-//    }
-//  }
+  //    "Example 2.8.2" should "work" in {
+  //      Polynomial.vars3[BigFraction] { (x, y, z) =>
+  //        val f1 = (x^2) + (y^2) + (z^2) - BigFraction.ONE
+  //        val f2 = (x^2) + (z^2) - y
+  //        val f3 = x - z
+  //      GröbnerBasis.of(f1, f2, f3) should be ()
+  //    }
+  //  }
 }
 
 class SPolynomialTest extends FlatSpec with Matchers {
+  implicit def defaultOrder: Ordering[Monomial] = Monomial.Ordering.GrLex
   Polynomial.vars2[BigFraction] { (x, y) =>
     val f = (x ^ 3) * (y ^ 2) - (x ^ 2) * (y ^ 3) + x
     val g = (x ^ 4) * y * new BigFraction(3) + (y ^ 2)
@@ -187,6 +194,7 @@ class SPolynomialTest extends FlatSpec with Matchers {
 }
 
 object PTestZ extends Properties("Polynomial[Int]") {
+  implicit def defaultOrder: Ordering[Monomial] = Monomial.Ordering.GrLex
   import Implicits.arbitraryPolynomial
   type Zx = Polynomial[Int]
   val z = Polynomial.zero[Int]
@@ -212,6 +220,8 @@ object PTestZ extends Properties("Polynomial[Int]") {
 
 class PTestBigZ extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
   import Implicits.arbitraryPolynomial
+  implicit def defaultOrder: Ordering[Monomial] = Monomial.Ordering.GrLex
+
   override implicit val generatorDrivenConfig: PropertyCheckConfig = PropertyCheckConfig(minSuccessful = 20)
   type BZx = Polynomial[BigInt]
   for (a <- 1 to 3) {
@@ -227,6 +237,7 @@ class PTestBigZ extends FlatSpec with Matchers with GeneratorDrivenPropertyCheck
 }
 
 class PTestQ extends FlatSpec with Matchers with GeneratorDrivenPropertyChecks {
+  implicit def o: Ordering[Monomial] = Monomial.Ordering.GrLex
   import Implicits.{arbitraryPolynomial, arbitraryRational}
   override implicit val generatorDrivenConfig: PropertyCheckConfig = PropertyCheckConfig(minSuccessful = 20)
   type Qx = Polynomial[BigFraction]
