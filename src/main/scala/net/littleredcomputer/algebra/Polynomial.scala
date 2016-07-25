@@ -101,7 +101,8 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Euclidean
   def S(y: Polynomial[R]) = {
     val xGamma = Polynomial(List(Term(R.one, leadingTerm.monomial lcm y.leadingTerm.monomial)))
     // The use of _1 below is what makes this wrong.
-    ((xGamma * this) divide this.leadingTerm)._1 - ((xGamma * y) divide y.leadingTerm)._1
+    //(((xGamma * this) divide this.leadingTerm)._1) - (((xGamma * y) divide y.leadingTerm)._1)
+    (xGamma divide this.leadingTerm)._1 * this - (xGamma divide y.leadingTerm)._1 * y
   }
   def lower(implicit Rx: EuclideanRing[Polynomial[R]]): Polynomial[Polynomial[R]] = {
     Polynomial.make((for ((x, qs) <- terms groupBy (_.monomial.exponents.head))
@@ -174,7 +175,3 @@ object Polynomial {
   }
 }
 
-object xxx extends App {
-  def pairs(s: Seq[Int]): Seq[(Int, Int)] = if (s.nonEmpty) (for {y <- s.tail} yield (s.head, y)) ++ pairs(s.tail) else Seq()
-  println(pairs(1 to 100) take 10)
-}

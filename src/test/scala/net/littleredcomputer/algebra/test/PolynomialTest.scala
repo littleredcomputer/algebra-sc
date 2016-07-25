@@ -153,9 +153,28 @@ class PolynomialSuite extends FlatSpec with Matchers {
   }
 }
 
+class SPolynomialTest extends FlatSpec with Matchers {
+  implicit def defaultOrder: Ordering[Monomial] = Monomial.Ordering.GrLex
+  Polynomial.vars2[BigFraction] { (x, y) =>
+    val f = (x ^ 3) * (y ^ 2) - (x ^ 2) * (y ^ 3) + x
+    val g = (x ^ 4) * y * new BigFraction(3) + (y ^ 2)
+    "S polynomials" should "check over Q" in {
+      f S g should be(- (x^3) * (y^3) + (x^2) - (y^3) * BigFraction.ONE_THIRD)
+    }
+  }
+  Polynomial.vars3[BigFraction] { (y, z, x) =>
+    val f = y - (x^2)
+    val g = z - (x^3)
+
+    it should "check over Q (p.87)" in {
+      f S g should be(-z * (x^2) + y * (x^3))
+    }
+  } (EuclideanRing.Q, Monomial.Ordering.Lex)
+}
+
 class GroebnerBasisTest extends FlatSpec with Matchers {
   "Example 2.7.1" should "work" in {
-    implicit def defaultOrder: Ordering[Monomial] = Monomial.Ordering.GrLex
+    implicit def o = Monomial.Ordering.GrLex
     Polynomial.vars2[BigFraction] { (x, y) =>
       val f1 = (x ^ 3) - x * y * BigFraction.TWO
       val f2 = (x ^ 2) * y - (y ^ 2) * BigFraction.TWO + x
@@ -168,29 +187,15 @@ class GroebnerBasisTest extends FlatSpec with Matchers {
       ))
     }
   }
-  // Might need to enable LEX order for polynomials to get this one to work.
-  // That raises an interesting question. The variables we supply will need
-  // to have lex order embedded within them in order to get the ordering to
-  // propagate to the polynomial arithmetic operations.
-  //    "Example 2.8.2" should "work" in {
-  //      Polynomial.vars3[BigFraction] { (x, y, z) =>
-  //        val f1 = (x^2) + (y^2) + (z^2) - BigFraction.ONE
-  //        val f2 = (x^2) + (z^2) - y
-  //        val f3 = x - z
-  //      GröbnerBasis.of(f1, f2, f3) should be ()
-  //    }
-  //  }
-}
-
-class SPolynomialTest extends FlatSpec with Matchers {
-  implicit def defaultOrder: Ordering[Monomial] = Monomial.Ordering.GrLex
-  Polynomial.vars2[BigFraction] { (x, y) =>
-    val f = (x ^ 3) * (y ^ 2) - (x ^ 2) * (y ^ 3) + x
-    val g = (x ^ 4) * y * new BigFraction(3) + (y ^ 2)
-    "S polynomials" should "check over Q" in {
-      f S g should be(- (x^3) * (y^3) + (x^2) - (y^3) * BigFraction.ONE_THIRD)
-    }
-  }
+  // not yet!
+//  "Example 2.8.2" should "work" in {
+//    Polynomial.vars3[BigFraction] { (x, y, z) =>
+//      val f1 = (x^2) + (y^2) + (z^2) - BigFraction.ONE
+//      val f2 = (x^2) + (z^2) - y
+//      val f3 = x - z
+//      GroebnerBasis.of(f1, f2, f3) should be ()
+//    } (EuclideanRing.Q, Monomial.Ordering.Lex)
+//  }
 }
 
 object PTestZ extends Properties("Polynomial[Int]") {
