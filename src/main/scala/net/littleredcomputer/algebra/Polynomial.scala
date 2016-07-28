@@ -26,13 +26,15 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Euclidean
   // of input monomial lists.
 
   def +(y: Polynomial[R]): Polynomial[R] = Polynomial.make(terms ++ y.terms)
-  def +(y: Term[R]) = Polynomial.make(y :: terms)
   def +(y: R) = Polynomial.make(constant(y) :: terms)
+  def -(y: Polynomial[R]) = this + (-y)
   def -(y: Term[R]) = Polynomial.make(Term(R.unary_-(y.coefficient), y.monomial) :: terms)
   def -(y: R) = this + R.unary_-(y)
-  def *(y: Polynomial[R]) = Polynomial.make(for { t <- terms; y <- y.terms } yield Term(R.*(t.coefficient, y.coefficient), t.monomial * y.monomial))
-  def *(y: Term[R]) = Polynomial.make(for { t <- terms } yield Term(R.*(t.coefficient, y.coefficient), t.monomial * y.monomial))
+  private def tt(x: Term[R], y: Term[R]) = Term(R.*(x.coefficient, y.coefficient), x.monomial * y.monomial)
+  def *(y: Polynomial[R]) = Polynomial.make(for { t <- terms; y <- y.terms } yield tt(t, y))
+  def *(y: Term[R]) = Polynomial.make(for { t <- terms } yield tt(t, y))
   def *(y: R) = map(c => R.*(c, y))
+
   def unit: Polynomial[R] = new Polynomial(List(Term(R.one, Monomial.unit(arity))))
   def ^(e: Int): Polynomial[R] = {
     @tailrec def step(x: Polynomial[R], e: Int, r: Polynomial[R]): Polynomial[R] = if (e == 0) r
@@ -42,7 +44,6 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Euclidean
   }
   def map[S](f: R => S) (implicit S: EuclideanRing[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
-  def -(y: Polynomial[R]) = this + (-y)
   def /?(p: Term[R], q: Term[R]): Option[Term[R]] = {
     val qx = (p.monomial.exponents, q.monomial.exponents).zipped map (_ - _)
     if (qx.forall(_ >= 0)) {
@@ -101,7 +102,7 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Euclidean
   def S(y: Polynomial[R]) = {
     val xGamma = Polynomial(List(Term(R.one, leadingTerm.monomial lcm y.leadingTerm.monomial)))
     // The use of _1 below is what makes this wrong.
-    //(((xGamma * this) divide this.leadingTerm)._1) - (((xGamma * y) divide y.leadingTerm)._1)
+    //((xGamma * this) divide this.leadingTerm)._1 - ((xGamma * y) divide y.leadingTerm)._1
     (xGamma divide this.leadingTerm)._1 * this - (xGamma divide y.leadingTerm)._1 * y
   }
   def lower(implicit Rx: EuclideanRing[Polynomial[R]]): Polynomial[Polynomial[R]] = {
@@ -115,22 +116,23 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Euclidean
       case (sum, Term(c, m)) => R.+(sum, R.*(c, R.^(x, m.exponents.head)))
     }
   }
+  override def toString() = terms.mkString("[", " ", "]")
 }
 
 
 
 object GroebnerBasis {
-  private def criticalPairs[F](s: List[Polynomial[F]]): List[(Polynomial[F], Polynomial[F])] = s match {
-    case x :: xs => (for {y <- xs} yield (x, y)) ++ criticalPairs(xs)
+  private def pairs[T](s: List[T]): List[(T, T)] = s match {
+    case x :: xs => (for {y <- xs} yield (x, y)) ++ pairs(xs)
     case Nil => Nil
   }
-  def compute[F](fs: List[Polynomial[F]])(implicit F: Field[F]) = {
+  def Buchberger[F](fs: List[Polynomial[F]])(implicit F: Field[F]) = {
     var G = fs.toSet
     var Gprime = G.empty
     var done = false
     while (!done) {
       Gprime = G
-      criticalPairs(Gprime.toList) foreach { case ((p: Polynomial[F], q: Polynomial[F])) =>
+      pairs(Gprime.toList) foreach { case ((p: Polynomial[F], q: Polynomial[F])) =>
         val (_, r) = (p S q) divide Gprime.toList
         if (!r.isZero) G += r
       }
@@ -138,7 +140,7 @@ object GroebnerBasis {
     }
     G
   }
-  def of[F](fs: Polynomial[F]*)(implicit F: Field[F]) = compute(fs.toList)
+  def of[F](fs: Polynomial[F]*)(implicit F: Field[F]) = Buchberger(fs.toList)
 }
 
 object Polynomial {
@@ -174,4 +176,5 @@ object Polynomial {
     f(vs(0), vs(1), vs(2))
   }
 }
+
 

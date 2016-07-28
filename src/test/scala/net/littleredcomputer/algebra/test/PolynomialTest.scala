@@ -188,14 +188,14 @@ class GroebnerBasisTest extends FlatSpec with Matchers {
     }
   }
   // not yet!
-//  "Example 2.8.2" should "work" in {
-//    Polynomial.vars3[BigFraction] { (x, y, z) =>
-//      val f1 = (x^2) + (y^2) + (z^2) - BigFraction.ONE
-//      val f2 = (x^2) + (z^2) - y
-//      val f3 = x - z
-//      GroebnerBasis.of(f1, f2, f3) should be ()
-//    } (EuclideanRing.Q, Monomial.Ordering.Lex)
-//  }
+  "Example 2.8.2" should "work" in {
+    Polynomial.vars3[BigFraction] { (x, y, z) =>
+      val f1 = (x^2) + (y^2) + (z^2) - BigFraction.ONE
+      val f2 = (x^2) + (z^2) - y
+      val f3 = x - z
+      GroebnerBasis.of(f1, f2, f3) should contain allOf(f3, -y+(z^2)*BigFraction.TWO, (z^4)*(new BigFraction(4)) + (z^2)*BigFraction.TWO - BigFraction.ONE)
+    } (EuclideanRing.Q, Monomial.Ordering.Lex)
+  }
 }
 
 object PTestZ extends Properties("Polynomial[Int]") {

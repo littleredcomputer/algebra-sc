@@ -34,6 +34,15 @@ object Monomial {
         if (grade != 0) grade else Lex.compare(x, y)
       }
     }
+    implicit object GRevLex extends Ordering[Monomial] {
+      override def compare(x: Monomial, y: Monomial): Int = {
+        val grade = y.degree - x.degree
+        if (grade != 0) grade else {
+          val diff = (x.exponents.reverse, y.exponents.reverse).zipped map (_-_) dropWhile (_ == 0)
+          if (diff.isEmpty) 0 else diff.head
+        }
+      }
+    }
   }
   def basis(i: Int, n: Int) = Monomial(for {j <- 0 until n} yield if (i == j) 1 else 0)
   def unit(n: Int) = Monomial(List.fill(n)(0))
