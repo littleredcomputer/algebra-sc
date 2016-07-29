@@ -172,32 +172,6 @@ class SPolynomialTest extends FlatSpec with Matchers {
   } (EuclideanRing.Q, Monomial.Ordering.Lex)
 }
 
-class GroebnerBasisTest extends FlatSpec with Matchers {
-  "Example 2.7.1" should "work" in {
-    implicit def o = Monomial.Ordering.GrLex
-    Polynomial.vars2[BigFraction] { (x, y) =>
-      val f1 = (x ^ 3) - x * y * BigFraction.TWO
-      val f2 = (x ^ 2) * y - (y ^ 2) * BigFraction.TWO + x
-      GroebnerBasis.of(f1, f2) should be(Set(
-        (x ^ 3) - x * y * BigFraction.TWO,
-        (x ^ 2) * y - (y ^ 2) * BigFraction.TWO + x,
-        -(x ^ 2),
-        -x * y * BigFraction.TWO,
-        -(y ^ 2) * BigFraction.TWO + x
-      ))
-    }
-  }
-  // not yet!
-  "Example 2.8.2" should "work" in {
-    Polynomial.vars3[BigFraction] { (x, y, z) =>
-      val f1 = (x^2) + (y^2) + (z^2) - BigFraction.ONE
-      val f2 = (x^2) + (z^2) - y
-      val f3 = x - z
-      GroebnerBasis.of(f1, f2, f3) should contain allOf(f3, -y+(z^2)*BigFraction.TWO, (z^4)*(new BigFraction(4)) + (z^2)*BigFraction.TWO - BigFraction.ONE)
-    } (EuclideanRing.Q, Monomial.Ordering.Lex)
-  }
-}
-
 object PTestZ extends Properties("Polynomial[Int]") {
   implicit def defaultOrder: Ordering[Monomial] = Monomial.Ordering.GrLex
   import Implicits.arbitraryPolynomial

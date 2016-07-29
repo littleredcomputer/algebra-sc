@@ -21,7 +21,7 @@ case class Term[R] (coefficient: R, monomial: Monomial) {
     * @param f mapping of exponents
     * @return the new term
     */
-  def mapx(f: Seq[Int] => Seq[Int]) = Term(coefficient, monomial map f)
+  def mapExponents(f: Seq[Int] => Seq[Int]) = Term(coefficient, monomial map f)
 
   override def toString = coefficient + "×" + monomial
 }

@@ -107,7 +107,7 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Euclidean
   }
   def lower(implicit Rx: EuclideanRing[Polynomial[R]]): Polynomial[Polynomial[R]] = {
     Polynomial.make((for ((x, qs) <- terms groupBy (_.monomial.exponents.head))
-      yield Term(Polynomial.make(qs map {_.mapx (_.tail)}), Monomial(List(x)))
+      yield Term(Polynomial.make(qs map {_.mapExponents (_.tail)}), Monomial(List(x)))
     ).toList)
   }
   def evaluate(x: R): R = {
@@ -116,31 +116,7 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Euclidean
       case (sum, Term(c, m)) => R.+(sum, R.*(c, R.^(x, m.exponents.head)))
     }
   }
-  override def toString() = terms.mkString("[", " ", "]")
-}
-
-
-
-object GroebnerBasis {
-  private def pairs[T](s: List[T]): List[(T, T)] = s match {
-    case x :: xs => (for {y <- xs} yield (x, y)) ++ pairs(xs)
-    case Nil => Nil
-  }
-  def Buchberger[F](fs: List[Polynomial[F]])(implicit F: Field[F]) = {
-    var G = fs.toSet
-    var Gprime = G.empty
-    var done = false
-    while (!done) {
-      Gprime = G
-      pairs(Gprime.toList) foreach { case ((p: Polynomial[F], q: Polynomial[F])) =>
-        val (_, r) = (p S q) divide Gprime.toList
-        if (!r.isZero) G += r
-      }
-      if (G == Gprime) done = true
-    }
-    G
-  }
-  def of[F](fs: Polynomial[F]*)(implicit F: Field[F]) = Buchberger(fs.toList)
+  override def toString = terms.mkString("[", " ", "]")
 }
 
 object Polynomial {
@@ -174,6 +150,10 @@ object Polynomial {
   def vars3[R](f: (Polynomial[R], Polynomial[R], Polynomial[R]) => Unit)(implicit R: EuclideanRing[R], O: Ordering[Monomial]) = {
     val vs = variables(3)
     f(vs(0), vs(1), vs(2))
+  }
+  def vars4[R](f: (Polynomial[R], Polynomial[R], Polynomial[R], Polynomial[R]) => Unit)(implicit R: EuclideanRing[R], O: Ordering[Monomial]) = {
+    val vs = variables(4)
+    f(vs(0), vs(1), vs(2), vs(3))
   }
 }
 

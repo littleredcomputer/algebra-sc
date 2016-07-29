@@ -2,9 +2,11 @@
   <dictionary name="colin">
     <words>
       <w>arities</w>
+      <w>exponentiated</w>
       <w>scalacheck</w>
       <w>scalatest</w>
       <w>scoverage</w>
+      <w>subclassing</w>
       <w>univariate</w>
     </words>
   </dictionary>

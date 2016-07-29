@@ -19,8 +19,8 @@ class TermTest extends FlatSpec with Matchers {
     } should be(Term[Double](0.5, Monomial(List(1, 0, 0))))
   }
   it should "allow modification of exponents with mapx" in {
-    x mapx (_.tail) should be(Term(1, Monomial(List(0, 0))))
-    y mapx (_.tail) should be(Term(1, Monomial(List(1, 0))))
-    z mapx (_.tail) should be(Term(1, Monomial(List(0, 1))))
+    x mapExponents (_.tail) should be(Term(1, Monomial(List(0, 0))))
+    y mapExponents (_.tail) should be(Term(1, Monomial(List(1, 0))))
+    z mapExponents (_.tail) should be(Term(1, Monomial(List(0, 1))))
   }
 }
