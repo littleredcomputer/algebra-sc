@@ -45,7 +45,7 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Euclidean
   def map[S](f: R => S) (implicit S: EuclideanRing[S]) = Polynomial.make[S](terms map (_ map f))
   def unary_- = map(R.unary_-)
   def /?(p: Term[R], q: Term[R]): Option[Term[R]] = {
-    val qx = (p.monomial.exponents, q.monomial.exponents).zipped map (_ - _)
+    val qx = (p.monomial.exponents, q.monomial.exponents).zipped map (_-_)
     if (qx.forall(_ >= 0)) {
       R./%(p.coefficient, q.coefficient) match {
         case (quotient, remainder) if remainder == R.zero => Some(Term[R](quotient, Monomial(qx)))
@@ -116,6 +116,7 @@ case class Polynomial[R] protected (terms: List[Term[R]]) (implicit R: Euclidean
       case (sum, Term(c, m)) => R.+(sum, R.*(c, R.^(x, m.exponents.head)))
     }
   }
+  def abs = if (terms.nonEmpty && R.negative(terms.head.coefficient)) map (c => R.*(R.unary_-(R.one), c)) else this
   override def toString = terms.mkString("[", " ", "]")
 }
 

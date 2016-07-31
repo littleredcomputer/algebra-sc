@@ -8,6 +8,7 @@ import org.apache.commons.math3.fraction.BigFraction
 import scala.annotation.tailrec
 
 trait RingWithUnity[T] {
+  def negative(x: T): Boolean
   def zero: T
   def one: T
   def *(x: T, y: T): T
@@ -31,6 +32,7 @@ trait Field[T] extends EuclideanRing[T] {
 
 object EuclideanRing {
   implicit object Z extends EuclideanRing[Int] {
+    override def negative(x: Int): Boolean = x < 0
     override def zero = 0
     override def one = 1
     override def *(x: Int, y: Int) = x * y
@@ -39,6 +41,7 @@ object EuclideanRing {
     override def /%(x: Int, y: Int) = (x/y, x%y)
   }
   implicit object BigZ extends EuclideanRing[BigInt] {
+    override def negative(x: BigInt) = x.signum == -1
     override def zero = 0
     override def one = 1
     override def *(x: BigInt, y: BigInt) = x * y
@@ -48,6 +51,7 @@ object EuclideanRing {
     override def ^(x: BigInt, y: Int) = x.pow(y)
   }
   implicit object R extends EuclideanRing[Double] {
+    override def negative(x: Double) = x < 0
     override def zero = 0.0
     override def one = 1.0
     override def *(x: Double, y: Double) = x * y
@@ -58,6 +62,7 @@ object EuclideanRing {
   }
   implicit object Zx extends EuclideanRing[Polynomial[Int]] {
     // kind of suspicious: how do we want to handle the ordering of the "generic" zero polynomial?
+    override def negative(x: Polynomial[Int]) = ???
     override def zero = Polynomial.make[Int](List())(Z, Monomial.Ordering.GrLex)
     override def one = ???
     override def *(x: Polynomial[Int], y: Polynomial[Int]) = x * y
@@ -66,6 +71,7 @@ object EuclideanRing {
     override def /%(x: Polynomial[Int], y: Polynomial[Int]) = x divide y
   }
   implicit object Q extends Field[BigFraction] {
+    override def negative(x: BigFraction) = x.compareTo(BigFraction.ZERO) < 0
     override def zero = BigFraction.ZERO
     override def one = BigFraction.ONE
     override def *(x: BigFraction, y: BigFraction) = x.multiply(y)
